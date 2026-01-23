@@ -1,6 +1,6 @@
-# ProGuien 🐧
+# ProGuin 🐧
 
-ProGuien is a productivity system inspired by the image of a penguin steadily moving 
+ProGuin is a productivity system inspired by the image of a penguin steadily moving 
 toward a mountain — slow, consistent, and unstoppable.
 
 This is not just a todo-list app.
