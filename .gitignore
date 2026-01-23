@@ -1,9 +1,6 @@
-# Python cache
 __pycache__/
 *.pyc
 
-# PyCharm / IDE files
 .idea/
 
-# App user data
 data/
