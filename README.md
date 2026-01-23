@@ -6,7 +6,7 @@ toward a mountain — slow, consistent, and unstoppable.
 This is not just a todo-list app.
 
 ProGuin is a growing experiment that combines ideas from multiple productivity philosophies and books, 
-starting from a simple CLI-basedfoundation and evolving step by step.
+starting from a simple CLI-based foundation and evolving step by step.
 
 The goal is to build a system that:
 - encourages consistency over motivation
