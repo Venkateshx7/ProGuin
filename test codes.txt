@@ -1,0 +1,9 @@
+test codes:
+
+if __name__ == "__main__" :
+    p = create_page()
+    t = create_task()
+    add_task_to_page(p,t)
+    print(p)
+    mark_task_done(p,0)
+    print(p)
