@@ -21,7 +21,7 @@ This repository represents the beginning.
 - Time-bound focus
 - Simple daily structure
 
-## What ProGuien is NOT
+## What ProGuin is NOT
 - Not a fancy todo app
 - Not a motivational quote generator
 - Not overwhelming
