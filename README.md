@@ -14,3 +14,30 @@ The goal is to build a system that:
 - works across CLI, desktop, and mobile in the future
 
 This repository represents the beginning.
+
+## Philosophy
+- Discipline over motivation
+- Do hard work first, reward later
+- Time-bound focus
+- Simple daily structure
+
+## What ProGuien is NOT
+- Not a fancy todo app
+- Not a motivational quote generator
+- Not overwhelming
+
+## Current Features
+- Task-based daily planning
+- Time-bound tasks
+- Rewards for completion
+- Persistent data (JSON)
+
+## Roadmap
+- Interactive CLI menu
+- Focus timers
+- Auto-run daily schedule
+- Desktop/mobile versions (future)
+
+## Getting Started
+```bash
+python app.py
