@@ -41,7 +41,4 @@ This repository represents the beginning.
 ## Getting Started
 ```bash
 python app.py
-## 🛠️ Project Showcase
-down image is just an architecture for phase 1 for terminal .   For phase 2 and phase 3 will advance like mordern applications interface and usage.
-![ChatGPT Image Jan 23, 2026, 08_41_04 PM](https://github.com/user-attachments/assets/bb3b0d4d-dc0d-4ec2-aad0-2d27b0feb755)
 
