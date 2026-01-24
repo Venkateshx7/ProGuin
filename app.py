@@ -2,6 +2,7 @@ import os
 import json
 
 from IPython.core.page import page_file
+from mistune.plugins.task_lists import task_lists
 
 
 def create_page():
@@ -46,6 +47,12 @@ def load_page():
         page = json.load(file)
     return page
 
+def list_task(page):
+    print(page["title"])
+    if len(page["tasks"]) == 0:
+        print("No tasks yet")
+    for number,task in enumerate(page["tasks"], start=1):
+        print(number,".", task["name"])
 
 if __name__ == "__main__" :
     if os.path.exists("data/page.json"):
@@ -61,3 +68,4 @@ if __name__ == "__main__" :
     save_page(p)
     l = load_page()
     print(l)
+    list_task(p)
