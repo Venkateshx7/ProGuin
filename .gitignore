@@ -6,3 +6,6 @@ venv/
 .DS_Store
 
 data/page.json
+
+.idea/
+
