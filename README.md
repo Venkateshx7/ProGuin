@@ -1,8 +1,7 @@
-# ProGuin 🐧
+# ProGuin 
 ## 👤 Author : **Venkatesh D**  - Creator & maintainer of ProGuin  
 
-ProGuin is a productivity system inspired by the image of a penguin steadily moving 
-toward a mountain — slow, consistent, and unstoppable.
+ProGuin is a productivity system 
 
 This is not just a todo-list app.
 
