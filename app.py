@@ -4,21 +4,27 @@ import json
 from datetime import datetime, timedelta
 
 def create_page():
-    title = input("Enter page title: ")# ask user for page title
-    page = {"title": title , "tasks": []} # create a page dictionary
+    title = input("Enter page title: ")
+    page = {"title": title , "tasks": []}
     return page # return it
 
 def create_task():
-    name = input("Enter task name: ")# 1) ask task name
+    name = input("Enter task name: ")
     timer_minutes = None
-    wants_timer = input("Do you wants a timer in minutes? (y/n): ").strip().lower()# 2) ask if user wants timer (y/n)
+    wants_timer = input("Do you wants a timer in minutes? (y/n): ").strip().lower()
     if wants_timer == "y":
-        timer_minutes = int(input("Enter timer minutes: "))# 3) if yes -> ask minutes (number)
+      while True:
+         timer_minutes = input("Enter timer_minutes: ")
+         if timer_minutes.isdigit():
+            timer_minutes =int(timer_minutes)
+            break
+         else:
+             print("Please enter a number")
 
     reward = None
-    wants_reward = input("Do you wants a reward? (y/n): ").strip().lower()# 4) ask if user wants reward (y/n)
+    wants_reward = input("Do you wants a reward? (y/n): ").strip().lower()
     if wants_reward == "y":
-        reward = input("Enter reward: ") # 5) if yes -> ask reward text
+        reward = input("Enter reward: ")
 
     task = {
         "name" : name ,
@@ -28,9 +34,7 @@ def create_task():
         "started_at": None,
         "ends_at": None
     }
-    return task# 6) return task dictionary
-def status_text(completed):
-    return "Done" if completed else "Not Done"
+    return task
 
 def add_task_to_page(page, task):
     page["tasks"].append(task)
@@ -52,6 +56,9 @@ def calculate_ends_at(started_at, timer_minutes):
         return started_at+ timedelta(minutes=timer_minutes)
 
 def mark_task_done(page, task_index):
+    if task_index < 0 or task_index >= len(page["tasks"]):
+        print("Task is invalid")
+        return
     page["tasks"][task_index]["completed"] = True
 
 def save_page(page):
@@ -67,7 +74,10 @@ def load_page():
         task.setdefault("ends_at", None)
     return page
 
-def list_task(page):
+def status_text(completed):
+    return "-> Done" if completed else "-> Not Done"
+
+def list_tasks(page):
     print(page["title"])
     if len(page["tasks"]) == 0:
         print("No tasks yet")
@@ -85,10 +95,13 @@ def list_task(page):
         else:
             reward_display =  f" -> {task['reward']}"
 
+        status = status_text(task["completed"])
+
         if task["completed"]:
-            print(number,".", "[x]", task["name"],timer_display,reward_display)
+            print(number,".", "[x]", task["name"],timer_display,reward_display,status)
         else:
-            print(number,".", "[ ]" , task["name"],timer_display,reward_display)
+            print(number,".", "[ ]" , task["name"],timer_display,reward_display,status)
+
 
 if __name__ == "__main__":
     if os.path.exists("data/page.json"):
@@ -113,4 +126,4 @@ if __name__ == "__main__":
     print("ends_at:", task2["ends_at"])
     print("timer_minutes:", task2["timer_minutes"])
 
-    list_task(p2)
+    list_tasks(p2)
