@@ -41,6 +41,12 @@ This repository represents the beginning.
 ## How to Run
 
 - Requires Python 3.8+
+
+### Dependencies
+
+ProGuin currently uses only Python standard library modules.
+No external packages are required.
+
 - Clone the repository
 - Run:
 
