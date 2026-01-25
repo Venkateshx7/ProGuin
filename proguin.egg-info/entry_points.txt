@@ -1,0 +1,2 @@
+[console_scripts]
+proguin = proguin.cli:main
