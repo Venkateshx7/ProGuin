@@ -3,19 +3,21 @@ import json
 from datetime import datetime, timedelta
 
 def create_page():
+    """Create a new page with user-provided title."""
     title = input("Enter page title: ")
     page = {"title": title, "tasks": []}
     return page
 
 def create_task():
+    """Create a new task with name, timer, and reward."""
     name = input("Enter task name: ")
     timer_minutes = None
     wants_timer = input("Do you want a timer in minutes? (y/n): ").strip().lower()
     if wants_timer == "y":
         while True:
-            timer_minutes = input("Enter timer_minutes: ")
-            if timer_minutes.isdigit():
-                timer_minutes = int(timer_minutes)
+            timer_minutes_str = input("Enter timer_minutes: ")
+            if timer_minutes_str.isdigit():
+                timer_minutes = int(timer_minutes_str)
                 break
             else:
                 print("Please enter a number")
@@ -36,9 +38,11 @@ def create_task():
     return task
 
 def add_task_to_page(page, task):
+    """Add a task to the page's task list."""
     page["tasks"].append(task)
 
 def start_task(page, task_index):
+    """Start a task by setting started_at and ends_at (as ISO string or None)."""
     if task_index < 0 or task_index >= len(page["tasks"]):
         print("Invalid task index")
         return
@@ -49,26 +53,34 @@ def start_task(page, task_index):
 
     start_dt = datetime.now()
     task["started_at"] = start_dt.isoformat(timespec="seconds")
-    task["ends_at"] = calculate_ends_at(start_dt, task["timer_minutes"])
+
+    if task["timer_minutes"] is not None:
+        ends_dt = start_dt + timedelta(minutes=task["timer_minutes"])
+        task["ends_at"] = ends_dt.isoformat(timespec="seconds")
+    else:
+        task["ends_at"] = None
 
 def calculate_ends_at(started_at, timer_minutes):
+    """Calculate ends_at datetime (not used directly anymore)."""
     if timer_minutes is None:
         return None
-    else:
-        return started_at + timedelta(minutes=timer_minutes)
+    return started_at + timedelta(minutes=timer_minutes)
 
 def mark_task_done(page, task_index):
+    """Mark a task as completed."""
     if task_index < 0 or task_index >= len(page["tasks"]):
         print("Invalid task index")
         return
     page["tasks"][task_index]["completed"] = True
 
 def save_page(page):
+    """Save the page data to JSON file."""
     os.makedirs("data", exist_ok=True)
     with open("data/page.json", "w") as file:
         json.dump(page, file, indent=4)
 
 def load_page():
+    """Load page from JSON or create new if missing."""
     if not os.path.exists("data/page.json"):
         print("No existing page found. Creating a new one.")
         return create_page()
@@ -80,12 +92,15 @@ def load_page():
     return page
 
 def status_text(completed):
+    """Return status string for display."""
     return "-> Done" if completed else "-> Not Done"
 
 def list_tasks(page):
+    """List all tasks with formatted output."""
     print("\n" + page["title"])
     if len(page["tasks"]) == 0:
         print("No tasks yet")
+        return
     for number, task in enumerate(page["tasks"], start=1):
         timer_display = f"({task['timer_minutes']}m)" if task["timer_minutes"] is not None else "-"
         reward_display = f" -> {task['reward']}" if task["reward"] is not None else ""
@@ -97,14 +112,15 @@ def list_tasks(page):
         
         print(f"{number}. {checkbox} {task['name']} {timer_display}{reward_display}{started}{ends} {status}")
 
-def get_task_index(prompt):
+def get_task_index(page, prompt):
+    """Safely get a valid 1-based task index from user input."""
     while True:
         try:
             index = int(input(prompt)) - 1
-            if index >= 0:
+            if 0 <= index < len(page["tasks"]):
                 return index
             else:
-                print("Index must be positive.")
+                print(f"Invalid task number. Must be between 1 and {len(page['tasks'])}.")
         except ValueError:
             print("Please enter a valid number.")
 
@@ -125,18 +141,21 @@ def main():
         elif choice == '2':
             task = create_task()
             add_task_to_page(page, task)
+            # Auto-start if timer was set
+            if task["timer_minutes"] is not None:
+                task_index = len(page["tasks"]) - 1
+                start_task(page, task_index)
+                print("Task added and started (timer active)!")
+            else:
+                print("Task added!")
             save_page(page)
-            print("Task added!")
         elif choice == '3':
             list_tasks(page)
             if len(page["tasks"]) > 0:
-                try:
-                    index = int(input("Enter task number to mark done: ")) - 1
-                    mark_task_done(page, index)
-                    save_page(page)
-                    print("Task marked as done!")
-                except ValueError:
-                    print("Please enter a valid number.")
+                index = get_task_index(page, "Enter task number to mark done: ")
+                mark_task_done(page, index)
+                save_page(page)
+                print("Task marked as done!")
         elif choice == '4':
             save_page(page)
             print("Goodbye! Keep building slowly. 🐧")
