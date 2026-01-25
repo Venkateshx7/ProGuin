@@ -57,14 +57,18 @@ python app.py
 ```
 ### Example Interactive Session
 ```text
-Welcome to ProGuin 👋
-1. Start a new day
-2. Add a task
-3. View today's tasks
-4. Exit
+Enter page title: My Day
+Enter task name: Learn Python
+Do you wants a timer in minutes? (y/n): y
+Enter timer_minutes: 30
+Do you wants a reward? (y/n): n
 
-Enter your choice: 1
-✔ Day started successfully.
+started_at: 2026-01-25T15:21:51
+ends_at: 2026-01-25T15:51:51
+timer_minutes: 30
+My Day
+1 . [ ] Learn Python (30m)  -> Not Done
+
 ```
 
 
