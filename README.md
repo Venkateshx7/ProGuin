@@ -53,7 +53,30 @@ No external packages are required.
 ```bash
 python proguin.py
 
+## Usage Examples
+
+### Start ProGuin (Interactive Mode)
+```bash
+python proguin.py
+```
+### Demo
+```text
+Enter page title: My Day
+Enter task name: Learn Python
+Do you wants a timer in minutes? (y/n): y
+Enter timer_minutes: 30
+Do you wants a reward? (y/n): n
+
+started_at: 2026-01-25T15:21:51
+ends_at: 2026-01-25T15:51:51
+timer_minutes: 30
+My Day
+1 . [ ] Learn Python (30m)  -> Not Done
+
+```
+
 ⭐ If you find ProGuin useful, consider giving it a star.
+
 
 
 
