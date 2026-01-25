@@ -38,7 +38,13 @@ This repository represents the beginning.
 - Auto-run daily schedule
 - Desktop/mobile versions (future)
 
-## Getting Started
+## How to Run
+
+- Requires Python 3.8+
+- Clone the repository
+- Run:
+
 ```bash
 python app.py
+
 
