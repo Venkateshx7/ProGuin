@@ -39,10 +39,6 @@ This repository represents the beginning.
 - Auto-run daily schedule
 - Desktop/mobile versions (future)
 
-## How to Run
-
-- Requires Python 3.8+
-
 ### Dependencies
 
 ProGuin currently uses only Python standard library modules.
@@ -50,8 +46,11 @@ No external packages are required.
 
 - Clone the repository
 - Run:
+  
+## **How to Run**
 
-### How to Run
+- Requires Python 3.8+
+  
 **Option 1 — Install locally (recommended)**
 
 pip install -e .
