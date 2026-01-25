@@ -59,7 +59,7 @@ python proguin.py
 
 ### Start ProGuin (Interactive Mode)
 ```bash
-python app.py
+python proguin.py
 ```
 ### Demo
 ```text
