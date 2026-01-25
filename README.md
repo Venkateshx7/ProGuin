@@ -33,7 +33,8 @@ This repository represents the beginning.
 - Persistent data (JSON)
 
 ## Roadmap
-- Interactive CLI menu
+- Interactive CLI menu (v0.2.0)
+- Packaging improvements (v0.3.0)
 - Focus timers
 - Auto-run daily schedule
 - Desktop/mobile versions (future)
@@ -50,15 +51,22 @@ No external packages are required.
 - Clone the repository
 - Run:
 
-```bash
-python proguin.py
+How to Run
+Option 1 — Install locally (recommended)
 
-## Usage Examples
+pip install -e .
+proguin
 
-### Start ProGuin (Interactive Mode)
-```bash
-python proguin.py
-```
+Option 2 — Run directly
+
+python -m proguin.cli
+
+Menu (v0.2.0)- Currently in progress....
+1. View tasks
+2. Add a task
+3. Mark a task as completed
+4. Exit
+
 ### Demo
 ```text
 Enter page title: My Day
@@ -74,8 +82,16 @@ My Day
 1 . [ ] Learn Python (30m)  -> Not Done
 
 ```
+Data Storage
+Tasks are stored locally in:
+
+data/page.json
 
 ⭐ If you find ProGuin useful, consider giving it a star.
+
+License
+
+MIT License
 
 
 
