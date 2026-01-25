@@ -1,110 +1,81 @@
-ProGuin
-👤 Author : Venkatesh D — Creator & Maintainer of ProGuin
+# ProGuin 
+## 👤 Author : **Venkatesh D**  - Creator & maintainer of ProGuin  
 
-ProGuin is a productivity system.
+ProGuin is a productivity system 
 
 This is not just a todo-list app.
 
-ProGuin is a growing experiment that combines ideas from multiple productivity philosophies and books,
+ProGuin is a growing experiment that combines ideas from multiple productivity philosophies and books, 
 starting from a simple CLI-based foundation and evolving step by step.
 
 The goal is to build a system that:
-
-Encourages consistency over motivation
-
-Rewards completion, not planning
-
-Works across CLI, desktop, and mobile in the future
+- encourages consistency over motivation
+- rewards completion, not planning
+- works across CLI, desktop, and mobile in the future
 
 This repository represents the beginning.
 
-Philosophy
+## Philosophy
+- Discipline over motivation
+- Do hard work first, reward later
+- Time-bound focus
+- Simple daily structure
 
-Discipline over motivation
+## What ProGuin is NOT
+- Not a fancy todo app
+- Not a motivational quote generator
+- Not overwhelming
 
-Do hard work first, reward later
+## Current Features
+- Task-based daily planning
+- Time-bound tasks
+- Rewards for completion
+- Persistent data (JSON)
 
-Time-bound focus
+## Roadmap
+- Interactive CLI menu
+- Focus timers
+- Auto-run daily schedule
+- Desktop/mobile versions (future)
 
-Simple daily structure
+## How to Run
 
-What ProGuin is NOT
+- Requires Python 3.8+
 
-Not a fancy todo app
+### Dependencies
 
-Not a motivational quote generator
+ProGuin currently uses only Python standard library modules.
+No external packages are required.
 
-Not overwhelming
+- Clone the repository
+- Run:
 
-Current Features
+```bash
+python proguin.py
 
-Task-based daily planning
+## Usage Examples
 
-Optional time-bound tasks
-
-Optional rewards
-
-Persistent data storage (JSON)
-
-Interactive CLI menu (v0.2.0)
-
-Roadmap
-
-Packaging improvements (v0.3.0)
-
-Basic tests
-
-Edit / delete tasks
-
-Focus timers
-
-Desktop / mobile versions (future)
-
-Requirements
-
-Python 3.8+
-
-ProGuin uses only Python standard library modules.
-No external dependencies are required.
-
-How to Run
-Option 1 — Install locally (recommended)
-pip install -e .
-proguin
-
-Option 2 — Run directly
-python -m proguin.cli
-
-Menu (v0.2.0)
-=== ProGuin ===
-1. View tasks
-2. Add a task
-3. Mark a task as completed
-4. Exit
-
-Usage Example
+### Start ProGuin (Interactive Mode)
+```bash
+python proguin.py
+```
+### Demo
+```text
 Enter page title: My Day
-
-=== ProGuin ===
-1. View tasks
-2. Add a task
-3. Mark a task as completed
-4. Exit
-
-Enter your choice (1-4): 2
 Enter task name: Learn Python
-Do you want a timer in minutes? (y/n): y
+Do you wants a timer in minutes? (y/n): y
 Enter timer_minutes: 30
-Do you want a reward? (y/n): n
+Do you wants a reward? (y/n): n
 
+started_at: 2026-01-25T15:21:51
+ends_at: 2026-01-25T15:51:51
+timer_minutes: 30
 My Day
-1. [ ] Learn Python (30m) -> Not Done
+1 . [ ] Learn Python (30m)  -> Not Done
 
-Data Storage
+```
 
-Tasks are stored locally in:
-
-data/page.json
+⭐ If you find ProGuin useful, consider giving it a star.
 
 
 
