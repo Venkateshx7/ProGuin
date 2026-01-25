@@ -53,8 +53,6 @@ No external packages are required.
 ```bash
 python proguin.py
 
-⭐ If you find ProGuin useful, consider giving it a star.
-
 ## Usage Examples
 
 ### Start ProGuin (Interactive Mode)
@@ -77,6 +75,7 @@ My Day
 
 ```
 
+⭐ If you find ProGuin useful, consider giving it a star.
 
 
 
