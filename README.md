@@ -53,4 +53,7 @@ No external packages are required.
 ```bash
 python app.py
 
+⭐ If you find ProGuin useful, consider giving it a star.
+
+
 
