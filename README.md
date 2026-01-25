@@ -51,9 +51,20 @@ python app.py
 
 ## Usage Examples
 
-### Start a new day
+### Start ProGuin (Interactive Mode)
 ```bash
-python app.py start-day
+python app.py
+```
+### Example Interactive Session
+```text
+Welcome to ProGuin 👋
+1. Start a new day
+2. Add a task
+3. View today's tasks
+4. Exit
+
+Enter your choice: 1
+✔ Day started successfully.
 ```
 
 
