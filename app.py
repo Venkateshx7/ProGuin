@@ -55,6 +55,7 @@ def mark_task_done(page, task_index):
     page["tasks"][task_index]["completed"] = True
 
 def save_page(page):
+    os.makedirs("data", exist_ok=True)
     with open("data/page.json", "w") as file:
         json.dump(page, file, indent=4 )
 
