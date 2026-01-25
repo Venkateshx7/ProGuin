@@ -53,19 +53,13 @@ No external packages are required.
 
 How to Run
 Option 1 — Install locally (recommended)
-
 pip install -e .
 proguin
 
-Option 2 — Run directly
 
+Option 2 — Run directly
 python -m proguin.cli
 
-Menu (v0.2.0)- Currently in progress....
-1. View tasks
-2. Add a task
-3. Mark a task as completed
-4. Exit
 
 ### Demo
 ```text
@@ -82,6 +76,12 @@ My Day
 1 . [ ] Learn Python (30m)  -> Not Done
 
 ```
+Menu (v0.2.0)- Currently in progress....
+1. View tasks
+2. Add a task
+3. Mark a task as completed
+4. Exit
+   
 Data Storage
 Tasks are stored locally in:
 
