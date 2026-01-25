@@ -55,10 +55,12 @@ How to Run
 Option 1 — Install locally (recommended)
 
 pip install -e .
+
 proguin
 
 
 Option 2 — Run directly
+
 python -m proguin.cli
 
 
