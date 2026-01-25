@@ -51,15 +51,15 @@ No external packages are required.
 - Clone the repository
 - Run:
 
-How to Run
-Option 1 — Install locally (recommended)
+### How to Run
+**Option 1 — Install locally (recommended)**
 
 pip install -e .
 
 proguin
 
 
-Option 2 — Run directly
+**Option 2 — Run directly**
 
 python -m proguin.cli
 
