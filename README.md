@@ -51,7 +51,7 @@ No external packages are required.
 - Run:
 
 ```bash
-python app.py
+python proguin.py
 
 ⭐ If you find ProGuin useful, consider giving it a star.
 
