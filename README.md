@@ -61,7 +61,7 @@ python proguin.py
 ```bash
 python app.py
 ```
-### Example Interactive Session
+### Demo
 ```text
 Enter page title: My Day
 Enter task name: Learn Python
