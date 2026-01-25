@@ -49,5 +49,14 @@ python app.py
 
 ⭐ If you find ProGuin useful, consider giving it a star.
 
+## Usage Examples
+
+### Start a new day
+```bash
+python app.py start-day
+```
+
+
+
 
 
