@@ -1,0 +1,26 @@
+test codes:
+
+if __name__ == "__main__":
+    if os.path.exists("data/page.json"):
+        p = load_page()
+    else:
+        p = create_page()
+        save_page(p)
+
+    t = create_task()
+    add_task_to_page(p, t)
+
+    task_index = len(p["tasks"]) - 1
+
+    start_task(p, task_index)
+    save_page(p)
+
+    # Reload to confirm persistence
+    p2 = load_page()
+    task2 = p2["tasks"][task_index]
+
+    print("started_at:", task2["started_at"])
+    print("ends_at:", task2["ends_at"])
+    print("timer_minutes:", task2["timer_minutes"])
+
+    list_tasks(p2)
