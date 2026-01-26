@@ -1,0 +1,19 @@
+{
+  "title": "My Day",
+  "tasks": [
+    {
+      "id": 1,
+      "name": "Learn Python",
+      "completed": false,
+      "timer_minutes": 30,
+      "reward": null
+    },
+    {
+      "id": 2,
+      "name": "Practice DSA",
+      "completed": true,
+      "timer_minutes": 45,
+      "reward": "Take a break"
+    }
+  ]
+}
