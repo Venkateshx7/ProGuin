@@ -2,6 +2,9 @@ import os
 import json
 from datetime import datetime, timedelta
 
+from numpy.matlib import empty
+
+
 def create_page():
     """Create a new page with user-provided title."""
     title = input("Enter page title: ")
@@ -55,16 +58,11 @@ def start_task(page, task_index):
     task["started_at"] = start_dt.isoformat(timespec="seconds")
 
     if task["timer_minutes"] is not None:
-        ends_dt = start_dt + timedelta(minutes=task["timer_minutes"])
-        task["ends_at"] = ends_dt.isoformat(timespec="seconds")
+        ends_at = start_dt + timedelta(minutes=task["timer_minutes"])
+        task["ends_at"] = ends_at.isoformat(timespec="seconds")
+
     else:
         task["ends_at"] = None
-
-def calculate_ends_at(started_at, timer_minutes):
-    """Calculate ends_at datetime (not used directly anymore)."""
-    if timer_minutes is None:
-        return None
-    return started_at + timedelta(minutes=timer_minutes)
 
 def mark_task_done(page, task_index):
     """Mark a task as completed."""
@@ -87,9 +85,8 @@ def load_page():
     with open("data/page.json", "r") as file:
         page = json.load(file)
     for task in page.get("tasks", []):
-        task.setdefault("started_at", None)
-        task.setdefault("ends_at", None)
-    return page
+        tasks.setdefault("started_at", None)
+        tasks.setdefault("ends_at", None)
 
 def status_text(completed):
     """Return status string for display."""
