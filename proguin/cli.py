@@ -85,8 +85,9 @@ def load_page():
     with open("data/page.json", "r") as file:
         page = json.load(file)
     for task in page.get("tasks", []):
-        tasks.setdefault("started_at", None)
-        tasks.setdefault("ends_at", None)
+        task.setdefault("started_at", None)
+        task.setdefault("ends_at", None)
+    return page
 
 def status_text(completed):
     """Return status string for display."""
