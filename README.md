@@ -61,7 +61,7 @@ ProGuin currently uses only Python standard library modules. No external package
 -   Auto-run daily schedule
 -   Desktop/mobile versions (future)
 
-See the [open issues](https://github.com/your_username/your_repo/issues) for a list of proposed features (and known issues).
+See the [open issues](https://github.com/Venkateshx7/ProGuin/issues) for a list of proposed features (and known issues).
 
 ---
 
