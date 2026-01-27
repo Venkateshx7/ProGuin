@@ -20,8 +20,14 @@ The goal is to build a system that:
 
 This repository represents the beginning.
 
-<!-- Optional: Add a compelling screenshot or demo video -->
-<!-- ![Product Name Screen Shot](admin.png) -->
+## 📸 Screenshot
+![ProGuin Screenshot](screenshot.png)
+
+---
+
+## 🎥 Demo
+![ProGuin Demo](demo.gif)
+
 
 ### Built With
 
