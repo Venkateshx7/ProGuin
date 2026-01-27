@@ -142,6 +142,7 @@ Project Link: [https://github.com/Venkateshx7/ProGuin.git](https://github.com/Ve
 
 ## Acknowledgments
 
+-   All Contributors to ProGuin
 -   [Img Shields](https://shields.io)
 -   [Choose an Open Source License](https://choosealicense.com)
 -   [Font Awesome](https://fontawesome.com)
