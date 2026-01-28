@@ -2,9 +2,6 @@ import os
 import json
 from datetime import datetime, timedelta
 
-from numpy.matlib import empty
-
-
 def create_page():
     """Create a new page with user-provided title."""
     title = input("Enter page title: ")
