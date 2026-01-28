@@ -5,9 +5,19 @@
             "name": "gym",
             "timer_minutes": 30,
             "reward": "sleep",
-            "completed": false,
+            "completed": true,
             "started_at": "2026-01-26T14:57:21",
-            "ends_at": "2026-01-26T15:27:21"
+            "ends_at": "2026-01-26T15:27:21",
+            "scheduled_start": null
+        },
+        {
+            "name": "read",
+            "timer_minutes": 30,
+            "reward": "sleep",
+            "scheduled_start": "2026-01-28 11:30",
+            "completed": false,
+            "started_at": null,
+            "ends_at": null
         }
     ]
 }

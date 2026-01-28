@@ -2,6 +2,25 @@ import os
 import json
 from datetime import datetime, timedelta
 
+SCHEDULE_FMT = "%Y-%m-%d %H:%M"
+def ask_scheduled_start():
+    """Ask user to choose choice in scheduling a task"""
+    while True:
+        choice = input("start_now or schedule_later ? (1=start_now ,2=schedule_later): ")
+        if choice == "1":
+            return None
+        elif choice == "2":
+            while True:
+                raw = input(f"Enter scheduled date & time ({SCHEDULE_FMT}): ").strip()
+                try:
+                    datetime.strptime(raw,SCHEDULE_FMT)
+                    return raw
+                except ValueError:
+                    print("Invalid Formate.  Example: 2026-02-05 21:00")
+
+        else:
+            print("Invalid choice")
+
 def create_page():
     """Create a new page with user-provided title."""
     title = input("Enter page title: ")
@@ -9,8 +28,9 @@ def create_page():
     return page
 
 def create_task():
-    """Create a new task with name, timer, and reward."""
+    """Create a new task with name, timer, and and reward."""
     name = input("Enter task name: ")
+    scheduled_start = ask_scheduled_start()
     timer_minutes = None
     wants_timer = input("Do you want a timer in minutes? (y/n): ").strip().lower()
     if wants_timer == "y":
@@ -31,9 +51,10 @@ def create_task():
         "name": name,
         "timer_minutes": timer_minutes,
         "reward": reward,
+        "scheduled_start": scheduled_start,
         "completed": False,
         "started_at": None,
-        "ends_at": None
+        "ends_at": None,
     }
     return task
 
@@ -84,6 +105,7 @@ def load_page():
     for task in page.get("tasks", []):
         task.setdefault("started_at", None)
         task.setdefault("ends_at", None)
+        task.setdefault("scheduled_start", None)
     return page
 
 def status_text(completed):
@@ -99,13 +121,14 @@ def list_tasks(page):
     for number, task in enumerate(page["tasks"], start=1):
         timer_display = f"({task['timer_minutes']}m)" if task["timer_minutes"] is not None else "-"
         reward_display = f" -> {task['reward']}" if task["reward"] is not None else ""
+        scheduled_display = f" (Scheduled: {task['scheduled_start']})" if task["scheduled_start"] is not None else ""
         status = status_text(task["completed"])
         checkbox = "[x]" if task["completed"] else "[ ]"
         
         started = f" (Started: {task['started_at']})" if task["started_at"] else ""
         ends = f" (Ends: {task['ends_at']})" if task["ends_at"] else ""
         
-        print(f"{number}. {checkbox} {task['name']} {timer_display}{reward_display}{started}{ends} {status}")
+        print(f"{number}. {checkbox} {task['name']} {timer_display}{reward_display}{scheduled_display}{started}{ends} {status}")
 
 def get_task_index(page, prompt):
     """Safely get a valid 1-based task index from user input."""
@@ -137,7 +160,7 @@ def main():
             task = create_task()
             add_task_to_page(page, task)
             # Auto-start if timer was set
-            if task["timer_minutes"] is not None:
+            if task["scheduled_start"] is None and task["timer_minutes"] is not None:
                 task_index = len(page["tasks"]) - 1
                 start_task(page, task_index)
                 print("Task added and started (timer active)!")
