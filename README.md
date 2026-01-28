@@ -83,6 +83,7 @@ See the [open issues](https://github.com/Venkateshx7/ProGuin/issues) for a list 
 
 ```bash
 pip install -e .
+proguin
 ```
 
 **Option 2 — Run directly**
