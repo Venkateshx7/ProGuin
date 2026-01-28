@@ -15,6 +15,24 @@
             "timer_minutes": 30,
             "reward": "sleep",
             "scheduled_start": "2026-01-28 11:30",
+            "completed": true,
+            "started_at": null,
+            "ends_at": null
+        },
+        {
+            "name": "gym",
+            "timer_minutes": 30,
+            "reward": "snacks",
+            "scheduled_start": "2026-01-28 14:00",
+            "completed": true,
+            "started_at": null,
+            "ends_at": null
+        },
+        {
+            "name": "study",
+            "timer_minutes": 30,
+            "reward": "sleep",
+            "scheduled_start": "2026-01-28 15:30",
             "completed": false,
             "started_at": null,
             "ends_at": null

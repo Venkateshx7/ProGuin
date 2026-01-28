@@ -6,12 +6,15 @@ SCHEDULE_FMT = "%Y-%m-%d %H:%M"
 def ask_scheduled_start():
     """Ask user to choose choice in scheduling a task"""
     while True:
-        choice = input("start_now or schedule_later ? (1=start_now ,2=schedule_later): ")
+        print("When should this task start?")
+        print("1. Start now")
+        print("2. Schedule for later")
+        choice = input("Enter choice: ").strip()
         if choice == "1":
             return None
         elif choice == "2":
             while True:
-                raw = input(f"Enter scheduled date & time ({SCHEDULE_FMT}): ").strip()
+                raw = input("Enter scheduled date & time (YYYY-MM-DD HH:MM) e.g., 2026-02-05 21:00: ").strip()
                 try:
                     datetime.strptime(raw,SCHEDULE_FMT)
                     return raw
@@ -32,10 +35,10 @@ def create_task():
     name = input("Enter task name: ")
     scheduled_start = ask_scheduled_start()
     timer_minutes = None
-    wants_timer = input("Do you want a timer in minutes? (y/n): ").strip().lower()
+    wants_timer = input("Do you want to set a timer? (y/n): ").strip().lower()
     if wants_timer == "y":
         while True:
-            timer_minutes_str = input("Enter timer_minutes: ")
+            timer_minutes_str = input("Enter timer minutes: ")
             if timer_minutes_str.isdigit():
                 timer_minutes = int(timer_minutes_str)
                 break
@@ -43,7 +46,7 @@ def create_task():
                 print("Please enter a number")
 
     reward = None
-    wants_reward = input("Do you want a reward? (y/n): ").strip().lower()
+    wants_reward = input("Do you want to add a reward? (y/n): ").strip().lower()
     if wants_reward == "y":
         reward = input("Enter reward: ")
 
@@ -146,11 +149,11 @@ def main():
     page = load_page()
     
     while True:
-        print("\n=== ProGuin ===")
+        print("\n=== ProGuin - Your Personal Task Manager ===")
         print("1. View tasks")
-        print("2. Add a task")
-        print("3. Mark a task as completed")
-        print("4. Exit")
+        print("2. Add new task")
+        print("3. Mark task done")
+        print("4. Exit ProGuin")
         
         choice = input("Enter your choice (1-4): ").strip()
         
@@ -163,9 +166,9 @@ def main():
             if task["scheduled_start"] is None and task["timer_minutes"] is not None:
                 task_index = len(page["tasks"]) - 1
                 start_task(page, task_index)
-                print("Task added and started (timer active)!")
+                print("▶ Task started with timer")
             else:
-                print("Task added!")
+                print("✅ Task added successfully")
             save_page(page)
         elif choice == '3':
             list_tasks(page)
@@ -173,13 +176,13 @@ def main():
                 index = get_task_index(page, "Enter task number to mark done: ")
                 mark_task_done(page, index)
                 save_page(page)
-                print("Task marked as done!")
+                print("✔ Task marked as done")
         elif choice == '4':
             save_page(page)
-            print("Goodbye! Keep building slowly.")
+            print("👋 See you soon. Keep moving forward.")
             break
         else:
-            print("Invalid choice. Try again.")
+            print("⚠ Please enter a valid option.")
 
 if __name__ == "__main__":
     main()
