@@ -154,4 +154,8 @@ Project Link: [https://github.com/Venkateshx7/ProGuin.git](https://github.com/Ve
 -   [Choose an Open Source License](https://choosealicense.com)
 -   [Font Awesome](https://fontawesome.com)
 
+## 🤝 Contributing
+We welcome all contributions.
+Check open issues labeled `good first issue`.
+
 ⭐ If you find ProGuin useful, consider giving it a star.
