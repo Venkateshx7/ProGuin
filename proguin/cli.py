@@ -219,6 +219,7 @@ def main():
             choice = input("Enter your choice (1-5): ").strip()
 
             if choice == "1":
+                page = load_page()
                 list_tasks(page)
             elif choice == "2":
                 task = create_task()
