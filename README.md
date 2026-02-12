@@ -61,11 +61,10 @@ Click the preview above to watch the full Android demo video.
 ## 📸 Android Screenshots
 
 <p align="center">
-  <img src="assets/proguin_app_welcome.jpg" width="200"/>
   <img src="assets/proguin_app_choose_path.jpg" width="200"/>
   <img src="assets/proguin_app_main.jpg" width="200"/>
   <img src="assets/proguin_app_notifications.jpg" width="200"/>
-  <img src="assets/proguin_cli_screenshot.jpg" width="200"/>
+   <img src="assets/proguin_cli_screenshot.jpg" width="200"/>
 </p>
 
 ---
