@@ -1,4 +1,4 @@
-# 🚀 ProGuin
+# 🐧 ProGuin
 
 <p align="center">
   <img src="assets/ProGuin_Feature_Grapics.png" width="800"/>
@@ -40,12 +40,16 @@ ProGuin started as a CLI experiment and evolved into a full Android productivity
 
 ---
 
-# 📱 Android Application
-
-## 🎬 Android Live Demo
+# 🎬 Android Demo
 
 <p align="center">
-  <img src="assets/Proguin_android_demo.gif" width="350"/>
+  <a href="https://github.com/Venkateshx7/ProGuin/releases/tag/v1.0.0">
+    <img src="assets/Proguin_android_demo.gif" width="400"/>
+  </a>
+</p>
+
+<p align="center">
+👉 Watch full demo video in Releases
 </p>
 
 ---
@@ -53,9 +57,9 @@ ProGuin started as a CLI experiment and evolved into a full Android productivity
 ## 📸 Android Screenshots
 
 <p align="center">
-  <img src="assets/proguin_app_welcome.jpg" width="200"/>
   <img src="assets/proguin_app_choose_path.jpg" width="200"/>
-  <img src="assets/proguin_app_main.jpg" width="200"/>
+   <img src="assets/proguin_app_main.jpg" width="200"/>
+  <img src="assets/proguin__app_main2.jpg" width="200"/>
   <img src="assets/proguin_app_notifications.jpg" width="200"/>
 </p>
 
@@ -82,10 +86,12 @@ Lightweight. Fast. Distraction-free.
 
 ---
 
-## 🎬 CLI Live Demo
+# 🎬 CLI Demo
 
 <p align="center">
-  <img src="assets/Proguin_cli_demo.gif" width="700"/>
+  <a href="https://github.com/Venkateshx7/ProGuin/releases/tag/v1.0.0">
+    <img src="assets/Proguin_cli_demo.gif" width="600"/>
+  </a>
 </p>
 
 ---
