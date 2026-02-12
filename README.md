@@ -1,161 +1,212 @@
-# ProGuin
+# ProGuin 🐧
 
-[![Contributors](https://img.shields.io/github/contributors/Venkateshx7/ProGuin?style=flat-square)](https://github.com/Venkateshx7/ProGuin/graphs/contributors) [![Forks](https://img.shields.io/github/forks/Venkateshx7/ProGuin.svg?style=flat-square)](https://github.com/Venkateshx7/ProGuin/network/members) [![Stargazers](https://img.shields.io/github/stars/Venkateshx7/ProGuin.svg?style=flat-square)](https://github.com/Venkateshx7/ProGuin/stargazers) [![Issues](https://img.shields.io/github/issues/Venkateshx7/ProGuin.svg?style=flat-square)](https://github.com/Venkateshx7/ProGuin/issues) [![License](https://img.shields.io/github/license/Venkateshx7/ProGuin.svg?style=flat-square)](https://github.com/Venkateshx7/ProGuin/blob/main/LICENSE)
+[![Contributors](https://img.shields.io/github/contributors/Venkateshx7/ProGuin?style=flat-square)](https://github.com/Venkateshx7/ProGuin/graphs/contributors)
+[![Forks](https://img.shields.io/github/forks/Venkateshx7/ProGuin.svg?style=flat-square)](https://github.com/Venkateshx7/ProGuin/network/members)
+[![Stargazers](https://img.shields.io/github/stars/Venkateshx7/ProGuin.svg?style=flat-square)](https://github.com/Venkateshx7/ProGuin/stargazers)
+[![Issues](https://img.shields.io/github/issues/Venkateshx7/ProGuin.svg?style=flat-square)](https://github.com/Venkateshx7/ProGuin/issues)
+[![License](https://img.shields.io/github/license/Venkateshx7/ProGuin.svg?style=flat-square)](https://github.com/Venkateshx7/ProGuin/blob/main/LICENSE)
+
+<p align="center">
+  <img src="assets/ProGuin_Feature_Grapics.png" alt="ProGuin Banner" width="100%" />
+</p>
+
+<p align="center">
+  <b>Stay focused. Keep moving.</b><br/>
+  Build discipline. Track focus. Win the day.
+</p>
+
+---
 
 ## 👤 Author
 
-**Venkatesh D** - Creator & maintainer of ProGuin
-
-## About The Project
-
-ProGuin is a productivity system.
-
-This is not just a todo-list app. ProGuin is a growing experiment that combines ideas from multiple productivity philosophies and books, starting from a simple CLI-based foundation and evolving step by step.
-
-The goal is to build a system that:
-
--   Encourages consistency over motivation
--   Rewards completion, not planning
--   Works across CLI, desktop, and mobile in the future
-
-This repository represents the beginning.
-
-## 📸 Screenshot
-![ProGuin Screenshot](screenshot.png)
+**Venkatesh D**  
+Creator & Maintainer of ProGuin
 
 ---
 
-## 🎥 Demo
-![ProGuin Demo](demo.gif)
+# ✨ What is ProGuin?
 
+ProGuin is a discipline-first productivity system.
 
-### Built With
+It is not just a to-do app.  
+It is a structured daily execution system designed to:
 
-ProGuin currently uses only Python standard library modules. No external packages are required.
+- Encourage consistency over motivation  
+- Reward completion, not planning  
+- Promote time-bound focus  
+- Keep the system simple and practical  
 
----
+ProGuin started as a Python CLI productivity tool and is now evolving into a full Android application.
 
-## Philosophy
-
--   Discipline over motivation
--   Do hard work first, reward later
--   Time-bound focus
--   Simple daily structure
-
-## What ProGuin is NOT
-
--   Not a fancy todo app
--   Not a motivational quote generator
--   Not overwhelming
+This repository contains both versions.
 
 ---
 
-## Current Features
+# 📦 Project Structure
 
--   Task-based daily planning
--   Time-bound tasks
--   Rewards for completion
--   Persistent data (JSON)
-
----
-
-## Roadmap
-
--   Interactive CLI menu (v0.2.0)
--   Packaging improvements (v0.3.0)
--   Focus timers
--   Auto-run daily schedule
--   Desktop/mobile versions (future)
-
-See the [open issues](https://github.com/Venkateshx7/ProGuin/issues) for a list of proposed features (and known issues).
+```
+proguin/             → Python CLI version
+proguin-android/     → Android App (Jetpack Compose)
+assets/              → Screenshots & demo media
+```
 
 ---
 
-## Getting Started
+# 🖥 Python CLI Version
 
-### Prerequisites
+The original version of ProGuin.
 
--   Python 3.8+
+### Features
 
-### Installation
+- Multi-page daily task planning
+- Optional timer for tasks
+- Optional reward system
+- Persistent JSON storage
+- Mark tasks as done
+- Remove tasks
+- Clean interactive CLI menu
 
-**Option 1 — Install locally (recommended)**
+---
+
+## 📸 CLI Screenshot
+
+<p align="center">
+  <img src="assets/proguin_cli_screenshot.jpg" width="85%" />
+</p>
+
+---
+
+## 🚀 Run the CLI
+
+### Requirements
+
+- Python 3.8+
+
+### Run directly
+
+```bash
+python -m proguin.cli
+```
+
+### Or install locally
 
 ```bash
 pip install -e .
 proguin
 ```
 
-**Option 2 — Run directly**
+---
 
-```bash
-python -m proguin.cli
+# 📱 Android App (Jetpack Compose)
+
+The next evolution of ProGuin.
+
+Built using:
+
+- Kotlin
+- Jetpack Compose
+- Notification system
+- Local JSON storage
+- Alarm & Timer system
+
+---
+
+## ✨ Android Features
+
+- Welcome onboarding screen
+- Choose productivity mode
+- Create tasks with optional timer
+- Schedule tasks with date & time
+- Optional reward field
+- Live timer notification
+- Scheduled task notification
+- Start / Delete / Done controls
+- Clean minimal UI
+
+---
+
+## 📸 Android Screenshots
+
+<p align="center">
+  <img src="assets/proguin_app_welcome.jpg" width="23%" />
+  <img src="assets/proguin_app_choose_path.jpg" width="23%" />
+  <img src="assets/proguin_app_main.jpg" width="23%" />
+  <img src="assets/proguin_app_notifications.jpg" width="23%" />
+</p>
+
+---
+
+# 🎥 Android Demo
+
+A full demo video is available inside:
+
+```
+assets/Proguin_app_demo.mp4
 ```
 
-## How to Run
+Download and watch locally.
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+---
 
-### Demo
+# 🛣 Roadmap
 
-```text
-Enter page title: My Day
-Enter task name: Learn Python
-Do you wants a timer in minutes? (y/n): y
-Enter timer_minutes: 30
-Do you wants a reward? (y/n): n
+### 🔧 Current Focus
 
-started_at: 2026-01-25T15:21:51
-ends_at: 2026-01-25T15:51:51
-timer_minutes: 30
-My Day
-1 . [ ] Learn Python (30m)  -> Not Done
-```
+- Fix bugs and crashes
+- Improve core functions
+- Improve UI/UX polish
+- Optimize performance
 
-#### CLI Menu (v0.2.0)
+### 🚀 Future Vision
 
-1.  View tasks
-2.  Add a task
-3.  Mark a task as completed
-4.  Exit
+- Scale ProGuin to wider audience
+- Expand ecosystem (CLI → Android → more)
+- Advanced focus modules
+- Habit systems
+- Data insights
+- Cloud sync (future concept)
 
-## Data Storage
+---
 
-Tasks are stored locally in:
+# 🎯 Philosophy Behind ProGuin
 
-`data/page.json`
+- Discipline over motivation
+- Start small, stay consistent
+- Finish what you start
+- Reward completion
+- Remove distractions
+- Daily execution > Big plans
 
-## Contributing
+---
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+# 🤝 Contributing
 
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
+Contributions are welcome.
 
-## License
+1. Fork the repository
+2. Create your feature branch  
+   `git checkout -b feature/AmazingFeature`
+3. Commit your changes  
+   `git commit -m "Add AmazingFeature"`
+4. Push to branch  
+   `git push origin feature/AmazingFeature`
+5. Open a Pull Request
+
+Please read `CONTRIBUTING.md` before submitting.
+
+---
+
+# 📄 License
 
 MIT License
 
-Distributed under the [MIT License](LICENSE). See `LICENSE.txt` for more information.
+Distributed under the MIT License.
 
-## Contact
+---
 
-Venkatesh D - [u/InitiativeQuiet6916](https://www.reddit.com/user/InitiativeQuiet6916/) - [venkatesh.devarajan307@gmail.com](mailto:venkatesh.devarajan307@gmail.com)
+# ⭐ Support the Project
 
-Project Link: [https://github.com/Venkateshx7/ProGuin.git](https://github.com/Venkateshx7/ProGuin.git)
+If you believe in disciplined productivity systems,  
+consider giving this project a star ⭐
 
-## Acknowledgments
-
--   All Contributors to ProGuin
--   [Img Shields](https://shields.io)
--   [Choose an Open Source License](https://choosealicense.com)
--   [Font Awesome](https://fontawesome.com)
-
-## 🤝 Contributing
-We welcome all contributions.
-Check open issues labeled `good first issue`.
-
-⭐ If you find ProGuin useful, consider giving it a star.
+Every star motivates further development.
