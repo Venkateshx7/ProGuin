@@ -36,22 +36,16 @@ It is a structured execution system built around:
 - ✔ Minimal friction  
 - ✔ Long-term consistency  
 
-ProGuin started as a CLI experiment and is now evolving into an Android productivity application.
+ProGuin started as a CLI experiment and evolved into a full Android productivity system.
 
 ---
 
 # 📱 Android Application
 
-## 🎬 Android Demo
+## 🎬 Android Live Demo
 
 <p align="center">
-  <a href="assets/Proguin_app_demo.mp4">
-    <img src="assets/proguin_app_welcome.jpg" width="700"/>
-  </a>
-</p>
-
-<p align="center">
-Click the preview above to watch the Android demo video.
+  <img src="assets/Proguin_android_demo.gif" width="350"/>
 </p>
 
 ---
@@ -71,11 +65,12 @@ Click the preview above to watch the Android demo video.
 
 - Structured daily pages
 - Task creation & deletion
-- Optional timer
+- Optional timer system
 - Local notifications
 - Clean minimal UI
 - JSON-based persistence
-- Built using Kotlin & Jetpack Compose
+- Built with Kotlin & Jetpack Compose
+- CLI engine integration via Chaquopy
 
 ---
 
@@ -87,10 +82,22 @@ Lightweight. Fast. Distraction-free.
 
 ---
 
-## 📸 CLI Screenshot
+## 🎬 CLI Live Demo
 
 <p align="center">
-  <img src="assets/proguin_cli_screenshot.jpg" width="800"/>
+  <img src="assets/Proguin_cli_demo.gif" width="700"/>
+</p>
+
+---
+
+## 📸 CLI Screenshots
+
+<p align="center">
+  <img src="assets/cli_screenshot.png" width="500"/>
+</p>
+
+<p align="center">
+  <img src="assets/cli_screenshot2.png" width="500"/>
 </p>
 
 ---
@@ -104,6 +111,7 @@ Lightweight. Fast. Distraction-free.
 - Reward system
 - Persistent JSON storage
 - Zero external dependencies
+- Fast startup & low resource usage
 
 ---
 
@@ -118,6 +126,9 @@ ProGuin depends on structure.
 - Focused time blocks
 - Reward after completion
 - Simple systems that scale
+
+Motivation fades.  
+Systems remain.
 
 ---
 
@@ -137,6 +148,8 @@ ProGuin
 │   ├── ViewModel Logic
 │   ├── Alarm & Notifications
 │   └── Local Storage
+│
+└── Shared Productivity Logic
 ```
 
 ---
@@ -144,9 +157,9 @@ ProGuin
 # 🛣 Roadmap
 
 ## 🔧 Current
-- Fix minor crashes
 - Improve UI polish
-- Improve core logic stability
+- Improve logic stability
+- Optimize task flow
 
 ## 🚀 Next
 - Focus mode screen
@@ -192,9 +205,9 @@ assets/             → Media files
 # 🤝 Contributing
 
 1. Fork the repository  
-2. Create feature branch  
-3. Commit changes  
-4. Submit Pull Request  
+2. Create a feature branch  
+3. Commit your changes  
+4. Submit a Pull Request  
 
 ---
 
@@ -215,5 +228,5 @@ If you believe in disciplined productivity:
 ---
 
 <p align="center">
-Built with discipline. Designed for consistency.
+Built with discipline. Designed for consistency. 🚀
 </p>
