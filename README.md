@@ -1,4 +1,4 @@
-# 🚀 ProGuin
+# 🐧 ProGuin
 
 <p align="center">
   <img src="assets/ProGuin_Feature_Grapics.png" width="800"/>
