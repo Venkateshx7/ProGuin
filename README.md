@@ -53,9 +53,9 @@ ProGuin started as a CLI experiment and evolved into a full Android productivity
 ## 📸 Android Screenshots
 
 <p align="center">
-  <img src="assets/proguin_app_welcome.jpg" width="200"/>
   <img src="assets/proguin_app_choose_path.jpg" width="200"/>
-  <img src="assets/proguin_app_main.jpg" width="200"/>
+   <img src="assets/proguin_app_main.jpg" width="200"/>
+  <img src="assets/proguin__app_main2.jpg" width="200"/>
   <img src="assets/proguin_app_notifications.jpg" width="200"/>
 </p>
 
