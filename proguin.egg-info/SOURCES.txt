@@ -1,0 +1,9 @@
+LICENSE
+README.md
+pyproject.toml
+proguin/cli.py
+proguin.egg-info/PKG-INFO
+proguin.egg-info/SOURCES.txt
+proguin.egg-info/dependency_links.txt
+proguin.egg-info/entry_points.txt
+proguin.egg-info/top_level.txt
