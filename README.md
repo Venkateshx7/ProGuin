@@ -1,4 +1,4 @@
-# 🚀 ProGuin 
+# 🚀 ProGuin
 
 <p align="center">
   <img src="assets/ProGuin_Feature_Grapics.png" width="800"/>
@@ -26,19 +26,17 @@ Founder & Developer of ProGuin
 
 # 📌 What is ProGuin?
 
-ProGuin is not another to-do list.
+ProGuin is not just a to-do list.
 
-It is a structured execution system designed around:
+It is a structured execution system built around:
 
 - ✔ Discipline over motivation  
 - ✔ Time-bound task execution  
-- ✔ Completion-driven rewards  
+- ✔ Reward after completion  
 - ✔ Minimal friction  
 - ✔ Long-term consistency  
 
-ProGuin started as a CLI experiment and is evolving into a full Android productivity application.
-
-This repository contains both systems.
+ProGuin started as a CLI experiment and is now evolving into an Android productivity application.
 
 ---
 
@@ -53,7 +51,7 @@ This repository contains both systems.
 </p>
 
 <p align="center">
-Click the preview above to watch the full Android demo video.
+Click the preview above to watch the Android demo video.
 </p>
 
 ---
@@ -65,7 +63,6 @@ Click the preview above to watch the full Android demo video.
   <img src="assets/proguin_app_choose_path.jpg" width="200"/>
   <img src="assets/proguin_app_main.jpg" width="200"/>
   <img src="assets/proguin_app_notifications.jpg" width="200"/>
-  <img src="assets/proguin_cli_screenshot.jpg" width="200"/>
 </p>
 
 ---
@@ -74,27 +71,19 @@ Click the preview above to watch the full Android demo video.
 
 - Structured daily pages
 - Task creation & deletion
-- Optional timer per task
+- Optional timer
 - Local notifications
-- Minimal clean UI
+- Clean minimal UI
 - JSON-based persistence
-- Built using Kotlin & Jetpack
+- Built using Kotlin & Jetpack Compose
 
 ---
 
 # 💻 CLI Version
 
-## 🎬 CLI Demo
+The original foundation of ProGuin.
 
-<p align="center">
-  <a href="assets/Proguin_app_demo.mp4">
-    <img src="assets/proguin_cli_screenshot.jpg" width="700"/>
-  </a>
-</p>
-
-<p align="center">
-CLI demo preview — lightweight, fast, distraction-free.
-</p>
+Lightweight. Fast. Distraction-free.
 
 ---
 
@@ -108,29 +97,27 @@ CLI demo preview — lightweight, fast, distraction-free.
 
 ### ⚡ CLI Features
 
-- Interactive menu
+- Interactive command-line menu
 - Add / Delete tasks
 - Mark tasks completed
-- Optional timer system
-- Reward-based execution
+- Optional timer
+- Reward system
 - Persistent JSON storage
 - Zero external dependencies
 
 ---
 
-# 🧠 Philosophy Behind ProGuin
+# 🧠 Philosophy
 
-Most productivity systems rely on motivation.
+ProGuin focuses on execution.
 
-ProGuin relies on structure.
+Most productivity systems depend on motivation.  
+ProGuin depends on structure.
 
-It encourages:
 - Daily execution
 - Focused time blocks
 - Reward after completion
-- Measurable discipline
-
-This makes it sustainable long term.
+- Simple systems that scale
 
 ---
 
@@ -150,35 +137,27 @@ ProGuin
 │   ├── ViewModel Logic
 │   ├── Alarm & Notifications
 │   └── Local Storage
-│
-└── Future Expansion
-    ├── Desktop App
-    ├── Cloud Sync
-    ├── Analytics Dashboard
-    └── Cross-device Support
 ```
 
 ---
 
 # 🛣 Roadmap
 
-## 🔧 Current Focus
-- Improve UI polish
+## 🔧 Current
 - Fix minor crashes
-- Refactor core logic
-- Improve performance
+- Improve UI polish
+- Improve core logic stability
 
-## 🚀 Upcoming
+## 🚀 Next
 - Focus mode screen
-- Habit streak tracking
+- Habit tracking
 - Statistics dashboard
-- Cloud backup
 - Play Store release
 
 ## 🌍 Long-Term Vision
 - Cross-platform ecosystem
-- Discipline-driven productivity community
-- Scalable architecture
+- Cloud sync
+- Discipline-driven productivity system
 
 ---
 
@@ -187,13 +166,13 @@ ProGuin
 ### Requirements
 - Python 3.8+
 
-### Install Locally
+### Install
 ```bash
 pip install -e .
 proguin
 ```
 
-### Or Run Directly
+### Or Run
 ```bash
 python -m proguin.cli
 ```
@@ -205,28 +184,23 @@ python -m proguin.cli
 ```
 proguin/            → CLI source code
 proguin-android/    → Android application
-assets/             → Screenshots & demos
-README.md
+assets/             → Media files
 ```
 
 ---
 
 # 🤝 Contributing
 
-Contributions are welcome.
-
 1. Fork the repository  
-2. Create a feature branch  
-3. Commit your improvements  
-4. Submit a Pull Request  
-
-Check issues labeled `good first issue`.
+2. Create feature branch  
+3. Commit changes  
+4. Submit Pull Request  
 
 ---
 
 # 📜 License
 
-This project is licensed under the MIT License.
+MIT License
 
 ---
 
@@ -234,23 +208,12 @@ This project is licensed under the MIT License.
 
 If you believe in disciplined productivity:
 
-- ⭐ Star this repository  
-- 🍴 Fork it  
-- 📢 Share it  
-- 💡 Suggest improvements  
-
----
-
-# 📬 Contact
-
-Venkatesh D  
-📧 venkatesh.devarajan307@gmail.com  
-
-GitHub:  
-https://github.com/Venkateshx7/ProGuin  
+⭐ Star the repository  
+🍴 Fork it  
+💡 Suggest improvements  
 
 ---
 
 <p align="center">
-  Built with discipline. Designed for consistency.
+Built with discipline. Designed for consistency.
 </p>
