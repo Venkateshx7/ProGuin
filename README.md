@@ -40,12 +40,16 @@ ProGuin started as a CLI experiment and evolved into a full Android productivity
 
 ---
 
-# 📱 Android Application
-
-## 🎬 Android Live Demo
+# 🎬 Android Demo
 
 <p align="center">
-  <img src="assets/Proguin_android_demo.gif" width="350"/>
+  <a href="https://github.com/Venkateshx7/ProGuin/releases/tag/v1.0.0">
+    <img src="assets/Proguin_android_demo.gif" width="400"/>
+  </a>
+</p>
+
+<p align="center">
+👉 Watch full demo video in Releases
 </p>
 
 ---
@@ -82,10 +86,12 @@ Lightweight. Fast. Distraction-free.
 
 ---
 
-## 🎬 CLI Live Demo
+# 🎬 CLI Demo
 
 <p align="center">
-  <img src="assets/Proguin_cli_demo.gif" width="700"/>
+  <a href="https://github.com/Venkateshx7/ProGuin/releases/tag/v1.0.0">
+    <img src="assets/Proguin_cli_demo.gif" width="600"/>
+  </a>
 </p>
 
 ---
