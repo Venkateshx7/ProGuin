@@ -1,5 +1,11 @@
 package com.venkatesh.proguin
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.os.Bundle
@@ -86,6 +92,47 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun MainScreen() {
         val context = LocalContext.current
+
+        var pendingStart by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+        val notifPermissionLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            val action = pendingStart   // ✅ take a copy
+            pendingStart = null         // ✅ clear FIRST (prevents double-run)
+
+            if (granted) {
+                action?.invoke()        // ✅ run once
+            } else {
+                Toast.makeText(
+                    context,
+                    "Notifications denied. Timer works but you won't see notifications.",
+                    Toast.LENGTH_LONG
+                ).show()
+                // Optional: still run action even if denied:
+                // action?.invoke()
+            }
+        }
+
+        fun ensureNotifPermissionThen(action: () -> Unit) {
+            if (android.os.Build.VERSION.SDK_INT < 33) {
+                action()
+                return
+            }
+
+            val granted = ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+            if (granted) {
+                action()
+            } else {
+                if (pendingStart != null) return
+                pendingStart = action
+                notifPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
 
         val py = remember { Python.getInstance() }
         val core = remember { py.getModule("proguin.core") }
@@ -444,15 +491,21 @@ class MainActivity : ComponentActivity() {
                         val taskId = taskMap[PyObject.fromJava("id")]?.toString().orEmpty()
                         val reqCode = taskIdToRequestCode(taskId)
 
-                        if (scheduledMillis != null) {
-                            AlarmScheduler.scheduleExact(
-                                context = context,
-                                requestCode = reqCode,
-                                triggerAtMillis = scheduledMillis!!,
-                                taskId = taskId,
-                                taskName = name,
-                                timerMinutes = timerMinutes ?: 0
-                            )
+                        val triggerAt = scheduledMillis  // ✅ copy first (prevents null crash)
+
+                        if (triggerAt != null) {
+                            ensureNotifPermissionThen {
+                                AlarmScheduler.scheduleExact(
+                                    context = context,
+                                    requestCode = reqCode,
+                                    triggerAtMillis = triggerAt,   // ✅ use triggerAt, NOT scheduledMillis!!
+                                    taskId = taskId,
+                                    taskName = name,
+                                    timerMinutes = timerMinutes ?: 0
+                                )
+                            }
+                        } else {
+                            // no schedule selected -> do nothing
                         }
 
                         Toast.makeText(context, "Saved ✅", Toast.LENGTH_SHORT).show()
@@ -477,34 +530,44 @@ class MainActivity : ComponentActivity() {
                         TaskCard(
                             task = t,
                             onStart = {
-                                val pages = core.callAttr("load_pages", pagesPath)
+                                val startAction = {
+                                    val pages = core.callAttr("load_pages", pagesPath)
 
-                                // mark started in python
-                                core.callAttr("start_task_current_page", pages, index)
-                                core.callAttr("save_pages", pagesPath, pages)
+                                    // mark started in python
+                                    core.callAttr("start_task_current_page", pages, index)
+                                    core.callAttr("save_pages", pagesPath, pages)
 
-                                val minutes = t.timerMinutesText.toIntOrNull()
+                                    val minutes = t.timerMinutesText.toIntOrNull()
 
-                                // show reminder now
-                                val startedText = buildString {
-                                    append("Started: ${t.name}")
-                                    if (minutes != null) append(" • ${minutes} min")
-                                    if (t.rewardText.isNotBlank()) append(" • Reward: ${t.rewardText}")
+                                    // show reminder now (will do nothing if notif permission denied on Android 13+)
+                                    val startedText = buildString {
+                                        append("Started: ${t.name}")
+                                        if (minutes != null) append(" • ${minutes} min")
+                                        if (t.rewardText.isNotBlank()) append(" • Reward: ${t.rewardText}")
+                                    }
+                                    NotificationHelper.showReminder(context, "ProGuin", startedText)
+
+                                    // start foreground timer if minutes exists
+                                    if (minutes != null && minutes > 0) {
+                                        TimerForegroundService.startTimer(
+                                            context = context,
+                                            taskId = t.id,
+                                            taskName = t.name,
+                                            minutes = minutes
+                                        )
+                                    }
                                 }
-                                NotificationHelper.showReminder(context, "ProGuin", startedText)
 
-                                // V2: start foreground timer if minutes exists
-                                if (minutes != null && minutes > 0) {
-                                    TimerForegroundService.startTimer(
-                                        context = context,
-                                        taskId = t.id,
-                                        taskName = t.name,
-                                        minutes = minutes
-                                    )
+                                ensureNotifPermissionThen {
+                                    startAction()
+                                    refreshFromPages()
                                 }
 
+                                // ✅ If user denies permission, your helper currently does NOT refresh.
+                                // So refresh once here too (safe, doesn’t start timer twice):
                                 refreshFromPages()
                             },
+
                             onDelete = {
                                 // cancel alarm + stop timer service FIRST
                                 val reqCode = taskIdToRequestCode(t.id)

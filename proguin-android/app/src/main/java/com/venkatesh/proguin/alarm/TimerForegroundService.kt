@@ -5,7 +5,10 @@ import android.content.Context
 import android.content.Intent
 import android.os.CountDownTimer
 import android.os.IBinder
+import androidx.core.content.ContextCompat
 import kotlin.math.max
+import android.content.pm.ServiceInfo
+import android.os.Build
 
 class TimerForegroundService : Service() {
 
@@ -19,21 +22,39 @@ class TimerForegroundService : Service() {
         NotificationHelper.ensureChannels(this)
 
         val remaining = max(0L, endAt - System.currentTimeMillis())
-        startForeground(
-            NotificationHelper.ID_TIMER,
-            NotificationHelper.buildTimerNotification(
+        val title = "Timer Running ⏳"
+        val text = "$taskName • ${formatMs(remaining)} left"
+
+        // ✅ Android 15/16 may block startForeground in some situations.
+        // We must not crash the whole app.
+        val notif = NotificationHelper.buildTimerNotification(this, title, text)
+
+        try {
+            if (Build.VERSION.SDK_INT >= 34) {
+                startForeground(
+                    NotificationHelper.ID_TIMER,
+                    notif,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE
+                )
+            } else {
+                startForeground(NotificationHelper.ID_TIMER, notif)
+            }
+        } catch (e: Exception) {
+            NotificationHelper.showReminder(
                 this,
-                "Timer Running ⏳",
-                "$taskName • ${formatMs(remaining)} left"
+                "Timer can't run in background",
+                "Open the app to continue the timer."
             )
-        )
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
         timer?.cancel()
         timer = object : CountDownTimer(remaining, 1000L) {
             override fun onTick(ms: Long) {
                 NotificationHelper.updateTimer(
                     this@TimerForegroundService,
-                    "Timer Running ⏳",
+                    title,
                     "$taskName • ${formatMs(ms)} left"
                 )
             }
@@ -76,7 +97,8 @@ class TimerForegroundService : Service() {
                 putExtra("taskName", taskName)
                 putExtra("endAtMillis", endAt)
             }
-            context.startForegroundService(i)
+            // ✅ safest way
+            ContextCompat.startForegroundService(context, i)
         }
 
         fun stopTimer(context: Context) {
