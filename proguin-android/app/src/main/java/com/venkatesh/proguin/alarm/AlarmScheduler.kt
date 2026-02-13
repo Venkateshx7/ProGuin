@@ -8,7 +8,7 @@ import android.os.Build
 
 object AlarmScheduler {
 
-    fun scheduleExact(
+    fun scheduleAllowWhileIdle(
         context: Context,
         requestCode: Int,
         triggerAtMillis: Long,
@@ -18,48 +18,48 @@ object AlarmScheduler {
     ): Boolean {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-        val intent = Intent(context, AlarmReceiver::class.java).apply {
-            putExtra("taskId", taskId)
-            putExtra("taskName", taskName)
-            putExtra("timerMinutes", timerMinutes)
-        }
-
         val pi = PendingIntent.getBroadcast(
             context,
             requestCode,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            Intent(context, AlarmReceiver::class.java).apply {
+                putExtra(NotificationHelper.EXTRA_TASK_ID, taskId)
+                putExtra(NotificationHelper.EXTRA_TASK_NAME, taskName)
+                putExtra("timerMinutes", timerMinutes)
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0)
         )
 
-        // ✅ No exact alarm. Works on Android 12+ without special permission.
-        try {
-            am.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerAtMillis,
-                pi
-            )
-        } catch (e: Exception) {
-            am.setAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                triggerAtMillis,
-                pi
-            )
+        return try {
+            // ✅ Does NOT require SCHEDULE_EXACT_ALARM
+            if (Build.VERSION.SDK_INT >= 23) {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi)
+            } else {
+                am.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pi)
+            }
+            true
+        } catch (_: Exception) {
+            false
         }
-
-        return true
     }
 
-    fun cancelExact(context: Context, requestCode: Int) {
-        val intent = Intent(context, AlarmReceiver::class.java)
+    fun canScheduleExactAlarms(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        return am.canScheduleExactAlarms()
+    }
 
+    fun cancel(context: Context, requestCode: Int) {
         val pi = PendingIntent.getBroadcast(
             context,
             requestCode,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+            Intent(context, AlarmReceiver::class.java),
+            PendingIntent.FLAG_NO_CREATE or (if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0)
+        ) ?: return
 
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         am.cancel(pi)
+        pi.cancel()
     }
 }
+
+
