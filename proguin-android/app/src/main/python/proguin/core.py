@@ -10,10 +10,7 @@ def _default_pages():
     return {
         "current_page": "default",
         "pages": {
-            "default": {
-                "title": "default",
-                "tasks": []
-            }
+            "default": {"title": "default", "tasks": []}
         }
     }
 
@@ -22,7 +19,6 @@ def load_pages(path: str):
         pages = _default_pages()
         save_pages(path, pages)
         return pages
-
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -31,7 +27,6 @@ def save_pages(path: str, pages):
         json.dump(pages, f, indent=2)
 
 def build_task(name: str, timer_minutes=None, reward=None, scheduled_start=None):
-    # scheduled_start is ISO string "yyyy-MM-dd HH:mm" OR None
     return {
         "id": str(uuid.uuid4()),
         "name": name,
@@ -62,6 +57,7 @@ def start_task_current_page(pages, index: int):
     tasks = page.get("tasks", [])
     if 0 <= index < len(tasks):
         tasks[index]["started_at"] = _now_str()
+        tasks[index]["completed"] = False
 
 def mark_task_done_current_page(pages, index: int):
     page = _get_current_page(pages)
@@ -95,7 +91,6 @@ def rename_page(pages, old_id: str, new_id: str):
 def delete_page(pages, page_id: str):
     container = pages.setdefault("pages", {})
     if page_id == "default":
-        # keep default always
         container["default"] = container.get("default", {"title": "default", "tasks": []})
         return
     if page_id in container:
@@ -104,3 +99,24 @@ def delete_page(pages, page_id: str):
         pages["current_page"] = "default"
         if "default" not in container:
             container["default"] = {"title": "default", "tasks": []}
+
+# ===== by-id helpers (Alarm + Timer finish) =====
+def start_task_by_id(pages, task_id: str):
+    pages_container = pages.get("pages", {})
+    for _, page in pages_container.items():
+        for t in page.get("tasks", []):
+            if t.get("id") == task_id:
+                t["started_at"] = _now_str()
+                t["completed"] = False
+                return True
+    return False
+
+def mark_task_done_by_id(pages, task_id: str):
+    pages_container = pages.get("pages", {})
+    for page_id, page in pages_container.items():
+        for t in page.get("tasks", []):
+            if t.get("id") == task_id:
+                t["completed"] = True
+                return True
+    return False
+
