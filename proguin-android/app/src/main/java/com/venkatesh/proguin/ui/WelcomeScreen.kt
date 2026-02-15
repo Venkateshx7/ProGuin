@@ -1,94 +1,118 @@
 package com.venkatesh.proguin.ui
 
-import android.widget.Toast
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import com.venkatesh.proguin.R
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
-fun WelcomeScreen(onStart: () -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-
-    Box(modifier = Modifier.fillMaxSize()) {
-
-        // 1) Background image
-        Image(
-            painter = painterResource(id = R.drawable.penguin_bg),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
+fun WelcomeScreen(
+    onStart: () -> Unit
+) {
+    // Premium gradient background (high contrast)
+    val bg = Brush.verticalGradient(
+        colors = listOf(
+            MaterialTheme.colorScheme.surface,
+            MaterialTheme.colorScheme.surface,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.10f),
+            MaterialTheme.colorScheme.surface
         )
+    )
 
-        // 2) Dark overlay (makes text readable)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f))
-        )
+    var pressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(if (pressed) 0.98f else 1.0f, label = "scale")
 
-        // 3) Premium "glass" card + content
-        Card(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(22.dp),
-            shape = MaterialTheme.shapes.extraLarge,
-            colors = CardDefaults.cardColors(
-                containerColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.12f)
-            )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bg)
+            .padding(18.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            tonalElevation = 6.dp,
+            shadowElevation = 10.dp,
+            color = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier
-                    .padding(22.dp)
-                    .wrapContentSize(),
+                    .widthIn(max = 420.dp)
+                    .padding(22.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Logo / icon area (simple, clean)
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "🐧",
+                        fontSize = 28.sp
+                    )
+                }
+
+                Spacer(Modifier.height(14.dp))
+
                 Text(
-                    text = "Welcome to ProGuin",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = androidx.compose.ui.graphics.Color.White
+                    text = "ProGuin",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
 
                 Text(
-                    text = "Build discipline. Track focus. Win the day.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.88f)
+                    text = "Minimal tasks. Maximum discipline.",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(22.dp))
+                Spacer(Modifier.height(18.dp))
 
                 Button(
-                    onClick = {
-                        Toast.makeText(context, "STAY HARD 💪", Toast.LENGTH_SHORT).show()
-                        onStart()
-                    },
+                    onClick = onStart,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
-                    shape = MaterialTheme.shapes.large
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 ) {
                     Text(
-                        text = "Start Your Focus Journey",
-                        style = MaterialTheme.typography.titleMedium
+                        text = "Start",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
+
+                Spacer(Modifier.height(10.dp))
+
+                Text(
+                    text = "Build consistency every day.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

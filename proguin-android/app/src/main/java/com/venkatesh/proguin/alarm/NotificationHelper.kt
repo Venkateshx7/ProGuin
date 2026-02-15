@@ -1,15 +1,16 @@
 package com.venkatesh.proguin.alarm
 
 import android.app.Notification
+import com.venkatesh.proguin.data.SettingsStore
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.venkatesh.proguin.MainActivity
 
 object NotificationHelper {
 
@@ -21,6 +22,9 @@ object NotificationHelper {
     // Timer actions
     const val ACTION_TIMER_STOP = "com.venkatesh.proguin.ACTION_TIMER_STOP"
     const val ACTION_TIMER_DONE = "com.venkatesh.proguin.ACTION_TIMER_DONE"
+    const val ACTION_TIMER_PAUSE = "com.venkatesh.proguin.ACTION_TIMER_PAUSE"
+    const val ACTION_TIMER_RESUME = "com.venkatesh.proguin.ACTION_TIMER_RESUME"
+
     const val EXTRA_TASK_ID = "taskId"
     const val EXTRA_TASK_NAME = "taskName"
 
@@ -28,7 +32,6 @@ object NotificationHelper {
         if (Build.VERSION.SDK_INT < 26) return
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        // Reminders: normal importance (sound ok)
         if (nm.getNotificationChannel(CH_REMINDERS) == null) {
             val ch = NotificationChannel(
                 CH_REMINDERS,
@@ -38,7 +41,6 @@ object NotificationHelper {
             nm.createNotificationChannel(ch)
         }
 
-        // Timers: LOW importance + NO sound (prevents tick sound spam)
         if (nm.getNotificationChannel(CH_TIMER) == null) {
             val ch = NotificationChannel(
                 CH_TIMER,
@@ -52,17 +54,32 @@ object NotificationHelper {
         }
     }
 
+    private fun openAppPendingIntent(context: Context): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or
+                (if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0)
+        return PendingIntent.getActivity(context, 1000, intent, flags)
+    }
+
     fun showReminder(context: Context, title: String, message: String) {
         ensureChannels(context)
 
-        val n = NotificationCompat.Builder(context, CH_REMINDERS)
+        val settings = SettingsStore(context)
+        val b = NotificationCompat.Builder(context, CH_REMINDERS)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
             .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setContentIntent(openAppPendingIntent(context))
             .setAutoCancel(true)
-            .build()
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 
-        safeNotify(context, (System.currentTimeMillis() % Int.MAX_VALUE).toInt(), n)
+        if (!settings.soundEnabled()) b.setSilent(true)
+        if (settings.vibrationEnabled()) b.setVibrate(longArrayOf(0, 120, 80, 120))
+
+        safeNotify(context, (System.currentTimeMillis() % Int.MAX_VALUE).toInt(), b.build())
     }
 
     fun buildTimerNotification(
@@ -70,59 +87,61 @@ object NotificationHelper {
         notifId: Int,
         taskId: String,
         taskName: String,
-        contentText: String
+        contentText: String,
+        isRunning: Boolean
     ): Notification {
         ensureChannels(context)
-
-        val stopIntent = Intent(context, TimerActionReceiver::class.java).apply {
-            action = ACTION_TIMER_STOP
-            putExtra(EXTRA_TASK_ID, taskId)
-            putExtra(EXTRA_TASK_NAME, taskName)
-        }
-
-        val doneIntent = Intent(context, TimerActionReceiver::class.java).apply {
-            action = ACTION_TIMER_DONE
-            putExtra(EXTRA_TASK_ID, taskId)
-            putExtra(EXTRA_TASK_NAME, taskName)
-        }
 
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or
                 (if (Build.VERSION.SDK_INT >= 23) PendingIntent.FLAG_IMMUTABLE else 0)
 
-        val piStop = PendingIntent.getBroadcast(
-            context,
-            9001 + notifId,
-            stopIntent,
-            flags
-        )
+        fun actionPI(action: String, requestCode: Int): PendingIntent {
+            val i = Intent(context, TimerActionReceiver::class.java).apply {
+                this.action = action
+                putExtra(EXTRA_TASK_ID, taskId)
+                putExtra(EXTRA_TASK_NAME, taskName)
+            }
+            return PendingIntent.getBroadcast(context, requestCode, i, flags)
+        }
 
-        val piDone = PendingIntent.getBroadcast(
-            context,
-            9002 + notifId,
-            doneIntent,
-            flags
-        )
+        val piStop = actionPI(ACTION_TIMER_STOP, 9001 + notifId)
+        val piDone = actionPI(ACTION_TIMER_DONE, 9002 + notifId)
+        val piPause = actionPI(ACTION_TIMER_PAUSE, 9003 + notifId)
+        val piResume = actionPI(ACTION_TIMER_RESUME, 9004 + notifId)
 
-        return NotificationCompat.Builder(context, CH_TIMER)
+        val b = NotificationCompat.Builder(context, CH_TIMER)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle(taskName.ifBlank { "Timer" })
             .setContentText(contentText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
             .setOngoing(true)
-            .setOnlyAlertOnce(true) // ✅ critical: update won't ring again
-            .setSilent(true)        // ✅ extra safety: no sound on updates
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .addAction(0, "Stop", piStop)
-            .addAction(0, "Done", piDone)
-            .build()
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setContentIntent(openAppPendingIntent(context))
+
+        if (isRunning) {
+            b.addAction(0, "Pause", piPause)
+        } else {
+            b.addAction(0, "Resume", piResume)
+        }
+        b.addAction(0, "Stop", piStop)
+        b.addAction(0, "Done", piDone)
+
+        if (Build.VERSION.SDK_INT >= 31) {
+            b.setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+        }
+
+        return b.build()
     }
 
     fun safeNotify(context: Context, id: Int, notification: Notification) {
         try {
+            if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
             NotificationManagerCompat.from(context).notify(id, notification)
         } catch (_: SecurityException) {
-            // Notifications denied -> ignore safely
         } catch (_: Exception) {
-            // OEM weirdness -> ignore safely
         }
     }
 }
