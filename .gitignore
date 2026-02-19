@@ -32,3 +32,10 @@ local.properties
 # Android Studio caches inside android project
 proguin-android/.idea/
 
+# Big build artifacts (NEVER commit)
+*.zip
+*.apk
+*.aab
+*.keystore
+*.jks
+
