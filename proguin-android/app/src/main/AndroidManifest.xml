@@ -1,14 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Foreground services -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SHORT_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <!-- Notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Keep CPU awake when alarm fires -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Optional: if user grants exact alarms -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -24,18 +34,27 @@
             </intent-filter>
         </activity>
 
+        <!-- Scheduled alarms -->
         <receiver
             android:name=".alarm.AlarmReceiver"
             android:exported="false" />
 
+        <!-- Timer notification actions -->
         <receiver
             android:name=".alarm.TimerActionReceiver"
             android:exported="false" />
 
+        <!-- Timer foreground service -->
         <service
             android:name=".alarm.TimerForegroundService"
             android:exported="false"
             android:foregroundServiceType="shortService" />
+
+        <!-- Alarm sound service -->
+        <service
+            android:name=".alarm.AlarmSoundService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
     </application>
 </manifest>

@@ -23,6 +23,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -34,23 +35,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.chaquo.python.PyObject
 import com.chaquo.python.Python
@@ -58,14 +58,19 @@ import com.chaquo.python.android.AndroidPlatform
 import com.venkatesh.proguin.alarm.AlarmScheduler
 import com.venkatesh.proguin.alarm.NotificationHelper
 import com.venkatesh.proguin.alarm.TimerForegroundService
+import com.venkatesh.proguin.ui.BackupUi
 import com.venkatesh.proguin.ui.ModeSelectScreen
+import com.venkatesh.proguin.ui.TaskCardPremium
 import com.venkatesh.proguin.ui.WelcomeScreen
+import com.venkatesh.proguin.ui.infinite.InfiniteHubScreen
 import com.venkatesh.proguin.ui.journey.DayCompleteScreen
+import com.venkatesh.proguin.ui.journey.DayOverviewScreen
+import com.venkatesh.proguin.ui.journey.Day74FinishScreen
 import com.venkatesh.proguin.ui.journey.JourneyHubScreen
+import com.venkatesh.proguin.ui.journey.JourneyIntroScreen
 import com.venkatesh.proguin.ui.theme.NeonCyan
 import com.venkatesh.proguin.ui.theme.NeonPink
 import com.venkatesh.proguin.ui.theme.ProGuinTheme
-import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -76,6 +81,7 @@ data class TaskUi(
     val id: String,
     val name: String,
     val timerMinutesText: String,
+    val timerMinutes: Int,
     val rewardText: String,
     val scheduledStartText: String,
     val startedAtText: String,
@@ -108,11 +114,36 @@ class MainActivity : ComponentActivity() {
             val day = intent.getIntExtra("day", 1).coerceIn(1, 74)
             try {
                 generateJourneyDayIntoTasks(context, day)
+
+                // ✅ FIX #1: force correct page immediately (prevents wrong day / race)
+                val dayId = "journey_day_" + day.toString().padStart(2, '0')
+                setCurrentPageInPagesJson(context, dayId)
+
             } catch (_: Exception) {
-                // Never crash the app because of generator
             } finally {
                 refreshTick.intValue++
             }
+        }
+    }
+
+    // ✅ Switch pages.json current_page (used for Infinite / Journey)
+    private fun setCurrentPageInPagesJson(context: Context, pageId: String) {
+        try {
+            if (!Python.isStarted()) {
+                Python.start(AndroidPlatform(context))
+            }
+            val py = Python.getInstance()
+            val core = py.getModule("proguin.core")
+            val pagesPath = File(context.filesDir, "pages.json").absolutePath
+
+            val pages = core.callAttr("load_pages", pagesPath)
+            val pagesMap = pages.asMap()
+
+            pagesMap[PyObject.fromJava("current_page")] = PyObject.fromJava(pageId)
+
+            core.callAttr("save_pages", pagesPath, pages)
+            sendPagesUpdatedBroadcast(context)
+        } catch (_: Exception) {
         }
     }
 
@@ -127,46 +158,110 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ProGuinTheme {
+
                 var page by remember { mutableStateOf("welcome") }
+
+                // ✅ remembers where Tasks was opened from
+                var tasksEntry by rememberSaveable { mutableStateOf("mode") }
+
+                // ✅ remember which day got completed
+                var completedDayArg by remember { mutableIntStateOf(1) }
+
+                // ✅ for DayOverviewScreen
+                var overviewDayArg by remember { mutableIntStateOf(1) }
 
                 when (page) {
 
-                    "welcome" -> WelcomeScreen(onStart = { page = "mode" })
+                    "welcome" -> WelcomeScreen(
+                        onStart = { page = "mode" }
+                    )
 
                     "mode" -> ModeSelectScreen(
-                        on74Days = { page = "journey" },
-                        onInfinite = { page = "tasks" },
+                        // ✅ open intro first, not directly hub
+                        on74Days = { page = "journey_intro" },
+                        onInfinite = { page = "infinite" },
                         onBack = { page = "welcome" }
+                    )
+
+                    // ✅ Journey Intro
+                    "journey_intro" -> JourneyIntroScreen(
+                        onBack = { page = "mode" },
+                        onStartJourney = { page = "journey" }
+                    )
+
+                    // ✅ Infinite separate screen -> then opens Tasks
+                    "infinite" -> InfiniteHubScreen(
+                        onOpenInfiniteTasks = {
+                            tasksEntry = "infinite" // ✅ important
+                            setCurrentPageInPagesJson(this@MainActivity, "default")
+                            page = "tasks"
+                        },
+                        onBack = { page = "mode" }
                     )
 
                     "tasks" -> TasksPremiumScreen(
                         refreshTickValue = refreshTick.intValue,
-                        onBackToMode = { page = "mode" },
-                        onDayCompleted = { page = "day_complete" }
+                        // ✅ Back target depends on where Tasks came from
+                        onBackToMode = {
+                            when (tasksEntry) {
+                                "infinite" -> page = "infinite"   // ✅ Tasks -> InfiniteHub
+                                "journey" -> page = "journey"     // ✅ Tasks -> JourneyHub
+                                else -> page = "mode"
+                            }
+                        },
+
+                        // ✅ open overview (story/quote) for current day
+                        onOpenDayOverview = { day ->
+                            overviewDayArg = day.coerceIn(1, 74)
+                            page = "day_overview"
+                        },
+
+                        // ✅ pass which day completed
+                        onDayCompleted = { doneDay ->
+                            completedDayArg = doneDay
+                            refreshTick.intValue++
+
+                            // ✅ Always go to DayComplete first (saves progress there)
+                            page = "day_complete"
+                        }
                     )
 
                     "journey" -> {
                         JourneyHubScreen(
                             onStartToday = {
-                                // JourneyHubScreen already broadcasts GENERATE_DAY_PLAN
-                                // and then navigates here (tasks).
+                                tasksEntry = "journey" // ✅ important
                                 page = "tasks"
+                            },
+                            onBack = {
+                                page = "mode"
                             }
                         )
                     }
 
+                    "day_overview" -> DayOverviewScreen(
+                        day = overviewDayArg,
+                        onBack = { page = "tasks" }
+                    )
+
                     "day_complete" -> {
                         DayCompleteScreen(
+                            completedDay = completedDayArg,
                             onContinue = {
-                                // ✅ Mark day complete in journey.json, advance to next day
-                                completeCurrentJourneyDayAndSave(this@MainActivity)
-                                // ✅ Refresh tasks UI
                                 refreshTick.intValue++
-                                // ✅ Back to journey hub
-                                page = "journey"
+
+                                // ✅ If Day 74 completed -> show final finish screen
+                                if (completedDayArg >= 74) {
+                                    page = "finish74"
+                                } else {
+                                    page = "journey"
+                                }
                             }
                         )
                     }
+
+                    "finish74" -> Day74FinishScreen(
+                        onBackToMode = { page = "mode" }
+                    )
 
                     else -> WelcomeScreen(onStart = { page = "mode" })
                 }
@@ -196,35 +291,21 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        try { unregisterReceiver(pagesUpdatedReceiver) } catch (_: Exception) {}
-        try { unregisterReceiver(generateDayPlanReceiver) } catch (_: Exception) {}
-    }
-
-    // ===========================
-    // Journey completion (DayComplete -> advance)
-    // ===========================
-    private fun completeCurrentJourneyDayAndSave(context: Context) {
         try {
-            if (!Python.isStarted()) {
-                Python.start(AndroidPlatform(context))
-            }
-            val py = Python.getInstance()
-            val journey = py.getModule("proguin.journey")
-            val path = File(context.filesDir, "journey.json").absolutePath
-
-            val data = journey.callAttr("load", path)
-            val updated = journey.callAttr("complete_day", data)
-            journey.callAttr("save", path, updated)
-
+            unregisterReceiver(pagesUpdatedReceiver)
         } catch (_: Exception) {
-            // ignore - never crash app here
+        }
+        try {
+            unregisterReceiver(generateDayPlanReceiver)
+        } catch (_: Exception) {
         }
     }
 
     // ===========================
-    // Auto day generator (Set-1 -> Tasks pages.json)
+    // Auto day generator (Journey -> Tasks pages.json)
     // ===========================
     private fun generateJourneyDayIntoTasks(context: Context, day: Int) {
+
         if (!Python.isStarted()) {
             Python.start(AndroidPlatform(context))
         }
@@ -257,7 +338,11 @@ class MainActivity : ComponentActivity() {
         val dayPageObj = pagesContainer2[pageKey]
         val dayPageMap = dayPageObj?.asMap() ?: emptyMap()
         val tasksObj = dayPageMap[PyObject.fromJava("tasks")]
-        val existingTasksCount = try { tasksObj?.asList()?.size ?: 0 } catch (_: Exception) { 0 }
+        val existingTasksCount = try {
+            tasksObj?.asList()?.size ?: 0
+        } catch (_: Exception) {
+            0
+        }
 
         if (existingTasksCount > 0) {
             core.callAttr("save_pages", pagesPath, pages)
@@ -269,9 +354,14 @@ class MainActivity : ComponentActivity() {
         val plan = journey.callAttr("get_day_plan", day)
         val planMap = plan.asMap()
         val planTasksObj = planMap[PyObject.fromJava("tasks")]
-        val planTasks = try { planTasksObj?.asList() ?: emptyList() } catch (_: Exception) { emptyList() }
+        val planTasks = try {
+            planTasksObj?.asList() ?: emptyList()
+        } catch (_: Exception) {
+            emptyList()
+        }
 
         for (t in planTasks) {
+
             val tm = t.asMap()
             val name = tm[PyObject.fromJava("name")]?.toString().orEmpty()
             val minutes = tm[PyObject.fromJava("minutes")]?.toString()?.toIntOrNull()
@@ -285,6 +375,7 @@ class MainActivity : ComponentActivity() {
                 null,
                 null
             )
+
             core.callAttr("add_task_to_current_page", pages, task)
         }
 
@@ -305,7 +396,9 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun PremiumBackground(content: @Composable () -> Unit) {
+
         val cs = MaterialTheme.colorScheme
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -318,6 +411,7 @@ class MainActivity : ComponentActivity() {
                     )
                 )
         ) {
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -331,20 +425,156 @@ class MainActivity : ComponentActivity() {
                         )
                     )
             )
+
             content()
         }
     }
+
+    // ✅ day from "journey_day_01"
+    private fun dayFromPageId(pageId: String): Int? {
+        if (!pageId.startsWith("journey_day_")) return null
+        return pageId.removePrefix("journey_day_").toIntOrNull()
+    }
+
+    // ✅ Week mapping: 1-7 => week1, 8-14 => week2 ...
+    private fun weekFromDay(day: Int): Int {
+        return ((day - 1) / 7) + 1
+    }
+
+    private data class Quad(
+        val a: Color,
+        val b: Color,
+        val scrim: Float,
+        val dir: Int
+    )
+
+    @Composable
+    private fun TaskScreenBackground(
+        currentPageId: String,
+        content: @Composable () -> Unit
+    ) {
+        val day = remember(currentPageId) { dayFromPageId(currentPageId) }
+        val week = remember(day) { day?.let { weekFromDay(it) } }
+
+        val bgResId = remember(currentPageId, week) {
+            when {
+                currentPageId == "default" || currentPageId == "infinite" -> R.drawable.penguin_bg
+
+                week != null -> when (week) {
+                    1 -> R.drawable.bg_arc1
+                    2 -> R.drawable.bg_arc2
+                    3 -> R.drawable.bg_arc3
+                    4 -> R.drawable.bg_arc4
+                    5 -> R.drawable.bg_arc5
+                    6 -> R.drawable.bg_arc6
+                    7 -> R.drawable.bg_arc7
+                    8 -> R.drawable.bg_arc8
+                    9 -> R.drawable.bg_arc9
+                    10 -> R.drawable.bg_arc10
+                    else -> R.drawable.bg_arc11
+                }
+
+                else -> R.drawable.penguin_bg
+            }
+        }
+
+        val (tintA, tintB, baseScrimAlpha, directionIndex) = remember(week) {
+            when (week ?: 0) {
+                1 -> Quad(Color(0xFF00E5FF), Color(0xFFFF4FD8), 0.10f, 0)
+                2 -> Quad(Color(0xFFFF4FD8), Color(0xFF00E5FF), 0.11f, 1)
+                3 -> Quad(Color(0xFF7C4DFF), Color(0xFF00E5FF), 0.11f, 2)
+                4 -> Quad(Color(0xFFFFC107), Color(0xFFFF4FD8), 0.11f, 3)
+                5 -> Quad(Color(0xFF00E676), Color(0xFF00E5FF), 0.11f, 0)
+                6 -> Quad(Color(0xFFFF5252), Color(0xFFFFC107), 0.12f, 1)
+                7 -> Quad(Color(0xFF40C4FF), Color(0xFF7C4DFF), 0.11f, 2)
+                8 -> Quad(Color(0xFFFF4FD8), Color(0xFF00E676), 0.12f, 3)
+                9 -> Quad(Color(0xFF00E5FF), Color(0xFFFFC107), 0.11f, 0)
+                10 -> Quad(Color(0xFF7C4DFF), Color(0xFFFF4FD8), 0.12f, 1)
+                else -> Quad(Color(0xFF00E5FF), Color(0xFFFF4FD8), 0.12f, 2)
+            }
+        }
+
+        val (start, end) = remember(directionIndex) {
+            when (directionIndex) {
+                0 -> Offset(0f, 0f) to Offset(1000f, 1200f)
+                1 -> Offset(1000f, 0f) to Offset(0f, 1200f)
+                2 -> Offset(0f, 1200f) to Offset(1000f, 0f)
+                else -> Offset(1000f, 1200f) to Offset(0f, 0f)
+            }
+        }
+
+        Box(Modifier.fillMaxSize()) {
+
+            Image(
+                painter = painterResource(bgResId),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = baseScrimAlpha.coerceIn(0.04f, 0.09f)))
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                tintA.copy(alpha = 0.12f),
+                                Color.Transparent,
+                                tintB.copy(alpha = 0.10f)
+                            ),
+                            start = start,
+                            end = end
+                        )
+                    )
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.10f),
+                                Color.Transparent
+                            ),
+                            startY = 0f,
+                            endY = 520f
+                        )
+                    )
+            )
+
+            content()
+        }
+    }
+
+    data class PageItem(
+        val id: String,
+        val title: String,
+        val isJourney: Boolean
+    )
 
     @Composable
     private fun TasksPremiumScreen(
         refreshTickValue: Int,
         onBackToMode: () -> Unit,
-        onDayCompleted: () -> Unit
-    ) {
+        onOpenDayOverview: (Int) -> Unit,
+        onDayCompleted: (Int) -> Unit
+    )
+    {
+
         val context = LocalContext.current
         val cs = MaterialTheme.colorScheme
 
         BackHandler { onBackToMode() }
+
+        // ✅ prevent day_complete loop for same day
+        var alreadyTriggeredDayComplete by rememberSaveable { mutableStateOf(false) }
 
         // ===== Notification permission (Android 13+) =====
         var pendingNotifAction by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -352,8 +582,10 @@ class MainActivity : ComponentActivity() {
         val notifPermissionLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.RequestPermission()
         ) { granted ->
+
             val action = pendingNotifAction
             pendingNotifAction = null
+
             if (!granted) {
                 Toast.makeText(
                     context,
@@ -361,19 +593,29 @@ class MainActivity : ComponentActivity() {
                     Toast.LENGTH_LONG
                 ).show()
             }
+
             action?.invoke()
+        }
+
+        fun hasNotifPermission(): Boolean {
+            if (Build.VERSION.SDK_INT < 33) return true
+            return ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
         }
 
         fun ensureNotificationPermissionThen(action: () -> Unit) {
             if (Build.VERSION.SDK_INT < 33) {
-                action(); return
+                action()
+                return
             }
-            val granted = ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
 
-            if (granted) action() else {
+            val granted = hasNotifPermission()
+
+            if (granted) {
+                action()
+            } else {
                 pendingNotifAction = action
                 notifPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
@@ -387,7 +629,8 @@ class MainActivity : ComponentActivity() {
         var pageTitle by remember { mutableStateOf("My Tasks") }
         var currentPageId by remember { mutableStateOf("default") }
         var tasksUi by remember { mutableStateOf(listOf<TaskUi>()) }
-        var pageIds by remember { mutableStateOf(listOf<String>()) }
+
+        var pageIds by remember { mutableStateOf(listOf<PageItem>()) }
 
         var selectedTab by remember { mutableStateOf(TaskTab.ALL) }
 
@@ -399,12 +642,18 @@ class MainActivity : ComponentActivity() {
         var scheduledMillis by remember { mutableStateOf<Long?>(null) }
         var scheduledLabel by remember { mutableStateOf("") }
 
-        // Page dialogs
+        // ✅ Journey: schedule a specific task
+        var scheduleTargetTask by remember { mutableStateOf<TaskUi?>(null) }
+
+        // Infinite pages dialogs
         var showNewPageDialog by remember { mutableStateOf(false) }
         var showRenamePageDialog by remember { mutableStateOf(false) }
         var showDeletePageDialog by remember { mutableStateOf(false) }
         var newPageName by remember { mutableStateOf("") }
         var renamePageName by remember { mutableStateOf("") }
+
+        // Backup / Restore sheet
+        var showBackupSheet by remember { mutableStateOf(false) }
 
         fun taskIdToRequestCode(taskId: String): Int = abs(taskId.hashCode()).coerceAtLeast(1)
 
@@ -425,20 +674,41 @@ class MainActivity : ComponentActivity() {
             context.sendBroadcast(i)
         }
 
+        fun norm(s: String): String = s.replace("'", "")
+
         fun refreshFromPages() {
+
             val pages = core.callAttr("load_pages", pagesPath)
             val pagesMap = pages.asMap()
 
-            val cpId = pagesMap[PyObject.fromJava("current_page")]?.toString() ?: "default"
+            val cpRaw = pagesMap[PyObject.fromJava("current_page")]?.toString() ?: "default"
+            val cpId = norm(cpRaw)
             currentPageId = cpId
 
             val pagesContainer = pagesMap[PyObject.fromJava("pages")]?.asMap() ?: emptyMap()
-            pageIds = pagesContainer.keys.map { it.toString().replace("'", "") }.sorted()
 
-            val currentPageObj = pagesContainer[PyObject.fromJava(cpId)]
+            pageIds = pagesContainer.map { (k, v) ->
+                val id = norm(k.toString())
+
+                val title = try {
+                    val vm = v.asMap()
+                    norm(vm[PyObject.fromJava("title")]?.toString() ?: id)
+                } catch (_: Exception) {
+                    id
+                }
+
+                PageItem(
+                    id = id,
+                    title = title,
+                    isJourney = id.startsWith("journey_day_")
+                )
+            }.sortedBy { it.title.lowercase() }
+
+            pageTitle = pageIds.firstOrNull { it.id == cpId }?.title ?: "My Tasks"
+
+            val currentPageObj =
+                pagesContainer[PyObject.fromJava(cpId)] ?: pagesContainer[PyObject.fromJava(cpRaw)]
             val currentPageMap = currentPageObj?.asMap() ?: emptyMap()
-
-            pageTitle = currentPageMap[PyObject.fromJava("title")]?.toString() ?: "My Tasks"
 
             val tasksObj = currentPageMap[PyObject.fromJava("tasks")]
             val taskList = tasksObj?.asList() ?: emptyList()
@@ -448,12 +718,17 @@ class MainActivity : ComponentActivity() {
 
                 val timerText = m[PyObject.fromJava("timer_minutes")]?.toString().orEmpty()
                     .let { if (it == "None") "" else it }
+                val timerMinutesInt = timerText.trim().toIntOrNull() ?: 0
+
                 val rewardText2 = m[PyObject.fromJava("reward")]?.toString().orEmpty()
                     .let { if (it == "None") "" else it }
+
                 val startedText = m[PyObject.fromJava("started_at")]?.toString().orEmpty()
                     .let { if (it == "None") "" else it }
+
                 val scheduledText = m[PyObject.fromJava("scheduled_start")]?.toString().orEmpty()
                     .let { if (it == "None") "" else it }
+
                 val completed = m[PyObject.fromJava("completed")]?.toString().orEmpty()
                     .equals("True", ignoreCase = true)
 
@@ -461,6 +736,7 @@ class MainActivity : ComponentActivity() {
                     id = m[PyObject.fromJava("id")]?.toString().orEmpty(),
                     name = m[PyObject.fromJava("name")]?.toString().orEmpty(),
                     timerMinutesText = timerText,
+                    timerMinutes = timerMinutesInt,
                     rewardText = rewardText2,
                     scheduledStartText = scheduledText,
                     startedAtText = startedText,
@@ -470,18 +746,30 @@ class MainActivity : ComponentActivity() {
         }
 
         fun setCurrentPage(pageId: String) {
-            val pages = core.callAttr("load_pages", pagesPath)
-            val pagesMap = pages.asMap()
-            pagesMap[PyObject.fromJava("current_page")] = PyObject.fromJava(pageId)
-            core.callAttr("save_pages", pagesPath, pages)
-            refreshFromPages()
+            try {
+                val pages = core.callAttr("load_pages", pagesPath)
+                core.callAttr("set_current_page", pages, pageId)
+                core.callAttr("save_pages", pagesPath, pages)
+
+                sendPagesUpdated()
+                refreshFromPages()
+            } catch (_: Exception) {
+            }
         }
 
-        // ✅ detect "all completed" in current page -> trigger Day Complete screen
         fun checkIfAllCompletedAndGoNext() {
             val list = tasksUi
-            if (list.isNotEmpty() && list.all { it.completed }) {
-                onDayCompleted()
+            val isJourney = currentPageId.startsWith("journey_day_")
+            val allDone = list.isNotEmpty() && list.all { it.completed }
+
+            if (isJourney && allDone) {
+                if (!alreadyTriggeredDayComplete) {
+                    alreadyTriggeredDayComplete = true
+                    val doneDay = dayFromPageId(currentPageId) ?: 1
+                    onDayCompleted(doneDay)
+                }
+            } else {
+                alreadyTriggeredDayComplete = false
             }
         }
 
@@ -496,7 +784,9 @@ class MainActivity : ComponentActivity() {
             checkIfAllCompletedAndGoNext()
         }
 
-        val activeTaskId = remember(refreshTickValue) { TimerForegroundService.getActiveTaskId(context) }
+        val activeTaskId: String = remember(refreshTickValue) {
+            TimerForegroundService.getActiveTaskId(context)
+        }
 
         fun isRunning(t: TaskUi): Boolean =
             activeTaskId.isNotBlank() && activeTaskId == t.id && !t.completed
@@ -515,7 +805,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        val scope = rememberCoroutineScope()
         val pagerState = rememberPagerState(
             initialPage = selectedTab.ordinal,
             pageCount = { TaskTab.entries.size }
@@ -527,124 +816,433 @@ class MainActivity : ComponentActivity() {
 
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-        PremiumBackground {
-            Scaffold(
-                containerColor = cs.background,
-                topBar = {
-                    Column {
-                        TopAppBar(
-                            title = {
-                                Column {
-                                    Text(
-                                        pageTitle.ifBlank { "My Tasks" },
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        "Page: $currentPageId",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = cs.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            },
-                            actions = {
-                                var expanded by remember { mutableStateOf(false) }
+        fun openSchedulePickerForTask(task: TaskUi) {
+            scheduleTargetTask = task
+            scheduledMillis = null
+            scheduledLabel = ""
 
-                                ExposedDropdownMenuBox(
-                                    expanded = expanded,
-                                    onExpandedChange = { expanded = !expanded }
-                                ) {
-                                    TextField(
-                                        value = currentPageId,
-                                        onValueChange = {},
-                                        readOnly = true,
-                                        modifier = Modifier
-                                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                                            .widthIn(min = 120.dp, max = 170.dp),
-                                        singleLine = true,
-                                        label = { Text("Page") },
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) }
-                                    )
+            val cal = Calendar.getInstance()
+            val dp = DatePickerDialog(
+                context,
+                { _, y, m, d ->
+                    val picked = Calendar.getInstance()
+                    picked.set(Calendar.YEAR, y)
+                    picked.set(Calendar.MONTH, m)
+                    picked.set(Calendar.DAY_OF_MONTH, d)
 
-                                    ExposedDropdownMenu(
-                                        expanded = expanded,
-                                        onDismissRequest = { expanded = false }
-                                    ) {
-                                        pageIds.forEach { id ->
-                                            DropdownMenuItem(
-                                                text = { Text(id, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                                onClick = {
-                                                    expanded = false
-                                                    setCurrentPage(id)
-                                                }
-                                            )
-                                        }
+                    val tp = TimePickerDialog(
+                        context,
+                        { _, hh, mm ->
+                            picked.set(Calendar.HOUR_OF_DAY, hh)
+                            picked.set(Calendar.MINUTE, mm)
+                            picked.set(Calendar.SECOND, 0)
+                            picked.set(Calendar.MILLISECOND, 0)
+
+                            val ms = picked.timeInMillis
+                            scheduledMillis = ms
+                            scheduledLabel = prettyFromMillis(ms)
+
+                            // ✅ Save schedule for this task by ID + schedule alarm
+                            val target = scheduleTargetTask
+                            if (target == null) return@TimePickerDialog
+
+                            val schedIso = isoFromMillis(ms)
+
+                            try {
+                                val pages = core.callAttr("load_pages", pagesPath)
+
+                                // ✅ requires core.py helper: set_task_schedule_by_id(pages, taskId, schedIso)
+                                val okObj = core.callAttr("set_task_schedule_by_id", pages, target.id, schedIso)
+                                core.callAttr("save_pages", pagesPath, pages)
+
+                                ensureNotificationPermissionThen {
+                                    try {
+                                        val reqCode = taskIdToRequestCode(target.id)
+
+                                        val ok = AlarmScheduler.scheduleAllowWhileIdle(
+                                            context = context,
+                                            requestCode = reqCode,
+                                            triggerAtMillis = ms,
+                                            taskId = target.id,
+                                            taskName = target.name.ifBlank { "Task" },
+                                            timerMinutes = target.timerMinutes
+                                        )
+
+                                        Toast.makeText(
+                                            context,
+                                            if (ok) "Scheduled ✅" else "Schedule failed ❌",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    } catch (_: Exception) {
+                                        Toast.makeText(
+                                            context,
+                                            "Schedule failed ❌",
+                                            Toast.LENGTH_LONG
+                                        ).show()
                                     }
                                 }
 
-                                Spacer(Modifier.width(8.dp))
+                                sendPagesUpdated()
+                                refreshFromPages()
+                            } catch (e: Exception) {
+                                Toast.makeText(
+                                    context,
+                                    "Schedule save failed: ${e.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            } finally {
+                                scheduleTargetTask = null
+                            }
+                        },
+                        cal.get(Calendar.HOUR_OF_DAY),
+                        cal.get(Calendar.MINUTE),
+                        false
+                    )
+                    tp.show()
+                },
+                cal.get(Calendar.YEAR),
+                cal.get(Calendar.MONTH),
+                cal.get(Calendar.DAY_OF_MONTH)
+            )
+            dp.show()
+        }
 
-                                var menuOpen by remember { mutableStateOf(false) }
-                                IconButton(onClick = { menuOpen = true }) { Text("⋮", fontSize = 18.sp) }
+        TaskScreenBackground(currentPageId = currentPageId) {
 
-                                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            val isJourney = currentPageId.startsWith("journey_day_")
+
+            Scaffold(
+                containerColor = Color.Transparent,
+
+                topBar = {
+                    TopAppBar(
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent
+                        ),
+                        title = {
+                            Column {
+                                Text(
+                                    pageTitle,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    if (isJourney) "Journey" else "Infinite",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = cs.onSurfaceVariant
+                                )
+                            }
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = onBackToMode) {
+                                Text("←", fontSize = 18.sp)
+                            }
+                        },
+                        actions = {
+                            var expanded by remember { mutableStateOf(false) }
+                            Box {
+                                IconButton(onClick = { expanded = true }) {
+                                    Text("⋮", fontSize = 18.sp)
+                                }
+                                DropdownMenu(
+                                    expanded = expanded,
+                                    onDismissRequest = { expanded = false }
+                                ) {
+
+                                    // ✅ NEW: Day overview for Journey pages (story/quote)
+                                    if (isJourney) {
+                                        DropdownMenuItem(
+                                            text = { Text("Day Overview") },
+                                            onClick = {
+                                                expanded = false
+                                                val d = dayFromPageId(currentPageId) ?: 1
+                                                onOpenDayOverview(d)
+                                            }
+                                        )
+                                    }
+
                                     DropdownMenuItem(
-                                        text = { Text("+ New Page") },
-                                        onClick = { menuOpen = false; showNewPageDialog = true }
-                                    )
-
-                                    DropdownMenuItem(
-                                        text = { Text("Rename Page") },
+                                        text = { Text("Refresh") },
                                         onClick = {
-                                            menuOpen = false
-                                            renamePageName = currentPageId
-                                            showRenamePageDialog = true
+                                            expanded = false
+                                            refreshFromPages()
                                         }
                                     )
 
                                     DropdownMenuItem(
-                                        text = { Text("Delete Page") },
-                                        onClick = { menuOpen = false; showDeletePageDialog = true }
+                                        text = { Text("Backup / Restore") },
+                                        onClick = {
+                                            expanded = false
+                                            showBackupSheet = true
+                                        }
                                     )
 
-                                    // Keep your BackupActionsMenu if you already have it
-                                    BackupActionsMenu(onDismiss = { menuOpen = false })
+                                    if (!isJourney) {
+
+                                        DropdownMenuItem(
+                                            text = { Text("New Page") },
+                                            onClick = { expanded = false; showNewPageDialog = true }
+                                        )
+
+                                        DropdownMenuItem(
+                                            text = { Text("Rename Page") },
+                                            onClick = {
+                                                expanded = false
+                                                renamePageName = pageTitle
+                                                showRenamePageDialog = true
+                                            }
+                                        )
+
+                                        DropdownMenuItem(
+                                            text = { Text("Delete Page") },
+                                            onClick = {
+                                                expanded = false
+                                                showDeletePageDialog = true
+                                            }
+                                        )
+                                    }
                                 }
                             }
-                        )
+                        }
+                    )
+                },
 
-                        TabRow(selectedTabIndex = pagerState.currentPage) {
-                            TaskTab.entries.forEachIndexed { index, tab ->
-                                val selected = pagerState.currentPage == index
-                                Tab(
-                                    selected = selected,
-                                    onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                                    text = {
+                // ✅ Hide “+” only in Journey mode
+                floatingActionButton = {
+                    if (!isJourney) {
+                        FloatingActionButton(
+                            onClick = {
+                                nameInput = ""
+                                timerInput = ""
+                                rewardInput = ""
+                                scheduledMillis = null
+                                scheduledLabel = ""
+                                showAddSheet = true
+                            }
+                        ) {
+                            Icon(Icons.Filled.Add, contentDescription = "Add")
+                        }
+                    }
+                }
+
+            ) { innerPadding ->
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+
+                    if (!isJourney) {
+
+                        val infinitePages = pageIds
+                            .filter { !it.isJourney }
+                            .sortedBy { it.title.lowercase() }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            infinitePages.forEach { p ->
+                                FilterChip(
+                                    selected = p.id == currentPageId,
+                                    onClick = { setCurrentPage(p.id) },
+                                    label = {
                                         Text(
-                                            tab.title,
+                                            p.title,
                                             maxLines = 1,
-                                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                                            color = if (selected) cs.primary else cs.onSurfaceVariant
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 )
                             }
                         }
                     }
-                },
-                floatingActionButton = {
-                    ExtendedFloatingActionButton(
-                        onClick = { showAddSheet = true },
-                        icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                        text = { Text("Add task") }
-                    )
-                }
-            ) { innerPadding ->
 
-                // ===== Page dialogs =====
+                    if (isJourney) {
+
+                        val journeyPages = pageIds
+                            .filter { it.isJourney }
+                            .sortedBy { it.id }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            journeyPages.forEach { p ->
+                                FilterChip(
+                                    selected = p.id == currentPageId,
+                                    onClick = { setCurrentPage(p.id) },
+                                    label = {
+                                        Text(
+                                            p.title,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize()
+                    ) { pageIndex ->
+
+                        val tab = TaskTab.entries[pageIndex]
+                        val visibleTasks = tasksForTab(tab)
+
+                        if (visibleTasks.isEmpty()) {
+
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(20.dp),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(18.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = cs.surface.copy(alpha = 0.90f)
+                                    )
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(18.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Text("No tasks here yet.", fontWeight = FontWeight.SemiBold)
+                                        Text(
+                                            if (isJourney) "Tasks will appear for this day automatically."
+                                            else "Tap “+” to create one.",
+                                            color = cs.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+
+                        } else {
+
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                itemsIndexed(visibleTasks) { _, t ->
+                                    val indexInAll = tasksUi.indexOfFirst { it.id == t.id }
+
+                                    TaskCardPremium(
+                                        task = t,
+                                        running = isRunning(t),
+                                        scheduled = isScheduled(t),
+
+                                        onStart = {
+                                            ensureNotificationPermissionThen {
+
+                                                try {
+                                                    val py2 = Python.getInstance()
+                                                    val core2 = py2.getModule("proguin.core")
+                                                    val pagesPath2 = File(context.filesDir, "pages.json").absolutePath
+
+                                                    val pages2 = core2.callAttr("load_pages", pagesPath2)
+                                                    core2.callAttr("start_task_by_id", pages2, t.id)
+                                                    core2.callAttr("save_pages", pagesPath2, pages2)
+                                                } catch (_: Exception) {}
+
+                                                try {
+                                                    NotificationHelper.showReminder(
+                                                        context = context,
+                                                        title = "Started ▶️",
+                                                        message = t.name.ifBlank { "Task" }
+                                                    )
+                                                } catch (_: Exception) {}
+
+                                                val minutes = t.timerMinutesText.toIntOrNull() ?: 0
+                                                if (minutes > 0) {
+                                                    TimerForegroundService.startTimer(
+                                                        context = context,
+                                                        taskId = t.id,
+                                                        taskName = t.name,
+                                                        minutes = minutes
+                                                    )
+                                                }
+
+                                                val updateIntent = Intent("com.venkatesh.proguin.PAGES_UPDATED").apply {
+                                                    setPackage(context.packageName)
+                                                }
+                                                context.sendBroadcast(updateIntent)
+                                            }
+                                        },
+
+                                        onDone = {
+                                            val reqCode = taskIdToRequestCode(t.id)
+                                            AlarmScheduler.cancel(context, reqCode)
+                                            TimerForegroundService.stopTimer(context, t.id)
+
+                                            val pages = core.callAttr("load_pages", pagesPath)
+                                            core.callAttr("mark_task_done_current_page", pages, indexInAll)
+                                            core.callAttr("save_pages", pagesPath, pages)
+
+                                            try {
+                                                if (hasNotifPermission()) {
+                                                    NotificationHelper.showReminder(
+                                                        context = context,
+                                                        title = "Completed ✅",
+                                                        message = t.name.ifBlank { "Task" }
+                                                    )
+                                                }
+                                            } catch (_: Exception) {}
+
+                                            sendPagesUpdated()
+                                            refreshFromPages()
+                                            checkIfAllCompletedAndGoNext()
+                                        },
+
+                                        onDelete = {
+                                            val reqCode = taskIdToRequestCode(t.id)
+                                            AlarmScheduler.cancel(context, reqCode)
+                                            TimerForegroundService.stopTimer(context, t.id)
+
+                                            val pages = core.callAttr("load_pages", pagesPath)
+                                            core.callAttr("delete_task_current_page", pages, indexInAll)
+                                            core.callAttr("save_pages", pagesPath, pages)
+
+                                            sendPagesUpdated()
+                                            refreshFromPages()
+                                            checkIfAllCompletedAndGoNext()
+                                        },
+
+                                        // ✅ Schedule button ONLY for Journey
+                                        showSchedule = isJourney,
+                                        onSchedule = {
+                                            openSchedulePickerForTask(t)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (showBackupSheet) {
+                    ModalBottomSheet(
+                        onDismissRequest = { showBackupSheet = false },
+                        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+                    ) {
+                        BackupUi()
+                    }
+                }
+
                 if (showNewPageDialog) {
                     AlertDialog(
                         onDismissRequest = { showNewPageDialog = false },
@@ -653,24 +1251,34 @@ class MainActivity : ComponentActivity() {
                             TextField(
                                 value = newPageName,
                                 onValueChange = { newPageName = it },
-                                label = { Text("Page id (e.g. work, study)") },
-                                modifier = Modifier.fillMaxWidth()
+                                label = { Text("Page title") },
+                                singleLine = true
                             )
                         },
                         confirmButton = {
                             Button(onClick = {
-                                val id = newPageName.trim()
-                                if (id.isBlank()) return@Button
-                                val pages = core.callAttr("load_pages", pagesPath)
-                                core.callAttr("add_page", pages, id, id)
-                                core.callAttr("save_pages", pagesPath, pages)
-                                showNewPageDialog = false
-                                newPageName = ""
-                                setCurrentPage(id)
+                                val title = newPageName.trim()
+                                if (title.isBlank()) return@Button
+
+                                try {
+                                    val pages = core.callAttr("load_pages", pagesPath)
+                                    val id = "page_" + System.currentTimeMillis().toString()
+
+                                    core.callAttr("add_page", pages, id, title)
+                                    core.callAttr("set_current_page", pages, id)
+                                    core.callAttr("save_pages", pagesPath, pages)
+
+                                    newPageName = ""
+                                    showNewPageDialog = false
+
+                                    sendPagesUpdated()
+                                    refreshFromPages()
+                                } catch (_: Exception) {
+                                }
                             }) { Text("Create") }
                         },
                         dismissButton = {
-                            OutlinedButton(onClick = { showNewPageDialog = false }) { Text("Cancel") }
+                            TextButton(onClick = { showNewPageDialog = false }) { Text("Cancel") }
                         }
                     )
                 }
@@ -683,23 +1291,43 @@ class MainActivity : ComponentActivity() {
                             TextField(
                                 value = renamePageName,
                                 onValueChange = { renamePageName = it },
-                                label = { Text("New page id") },
-                                modifier = Modifier.fillMaxWidth()
+                                label = { Text("New title") },
+                                singleLine = true
                             )
                         },
                         confirmButton = {
                             Button(onClick = {
-                                val newId = renamePageName.trim()
-                                if (newId.isBlank()) return@Button
-                                val pages = core.callAttr("load_pages", pagesPath)
-                                core.callAttr("rename_page", pages, currentPageId, newId)
-                                core.callAttr("save_pages", pagesPath, pages)
-                                showRenamePageDialog = false
-                                setCurrentPage(newId)
-                            }) { Text("Rename") }
+                                val title = renamePageName.trim()
+                                if (title.isBlank()) return@Button
+
+                                try {
+                                    val pages = core.callAttr("load_pages", pagesPath)
+                                    val pagesMap = pages.asMap()
+                                    val pagesContainer =
+                                        pagesMap[PyObject.fromJava("pages")]?.asMap()
+
+                                    val pageObj =
+                                        pagesContainer?.get(PyObject.fromJava(currentPageId))
+                                    val pageMap = pageObj?.asMap()
+
+                                    pageMap?.set(
+                                        PyObject.fromJava("title"),
+                                        PyObject.fromJava(title)
+                                    )
+
+                                    core.callAttr("save_pages", pagesPath, pages)
+
+                                    showRenamePageDialog = false
+                                    sendPagesUpdated()
+                                    refreshFromPages()
+                                } catch (_: Exception) {
+                                }
+                            }) { Text("Save") }
                         },
                         dismissButton = {
-                            OutlinedButton(onClick = { showRenamePageDialog = false }) { Text("Cancel") }
+                            TextButton(onClick = {
+                                showRenamePageDialog = false
+                            }) { Text("Cancel") }
                         }
                     )
                 }
@@ -707,141 +1335,42 @@ class MainActivity : ComponentActivity() {
                 if (showDeletePageDialog) {
                     AlertDialog(
                         onDismissRequest = { showDeletePageDialog = false },
-                        title = { Text("Delete page?") },
-                        text = { Text("Delete '$currentPageId'? Tasks inside will be removed.") },
+                        title = { Text("Delete this page?") },
+                        text = { Text("This will delete the page and its tasks.") },
                         confirmButton = {
-                            Button(onClick = {
-                                val pages = core.callAttr("load_pages", pagesPath)
-                                core.callAttr("delete_page", pages, currentPageId)
-                                core.callAttr("save_pages", pagesPath, pages)
-                                showDeletePageDialog = false
-                                setCurrentPage("default")
-                            }) { Text("Delete") }
+                            Button(
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFD32F2F)
+                                ),
+                                onClick = {
+                                    try {
+                                        val pages = core.callAttr("load_pages", pagesPath)
+                                        core.callAttr("delete_page", pages, currentPageId)
+                                        core.callAttr("save_pages", pagesPath, pages)
+
+                                        showDeletePageDialog = false
+                                        sendPagesUpdated()
+                                        refreshFromPages()
+                                    } catch (_: Exception) {
+                                    }
+                                }
+                            ) { Text("Delete", color = Color.White) }
                         },
                         dismissButton = {
-                            OutlinedButton(onClick = { showDeletePageDialog = false }) { Text("Cancel") }
+                            TextButton(onClick = {
+                                showDeletePageDialog = false
+                            }) { Text("Cancel") }
                         }
                     )
                 }
 
-                // ===== Swipeable content =====
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier
-                        .padding(innerPadding)
-                        .fillMaxSize()
-                ) { pageIndex ->
-
-                    val tab = TaskTab.entries[pageIndex]
-                    val visibleTasks = tasksForTab(tab)
-
-                    if (visibleTasks.isEmpty()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(20.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(18.dp),
-                                colors = CardDefaults.cardColors(containerColor = cs.surface)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(18.dp),
-                                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Text("No tasks here yet.", fontWeight = FontWeight.SemiBold)
-                                    Text("Tap “Add task” to create one.", color = cs.onSurfaceVariant)
-                                }
-                            }
-                        }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            itemsIndexed(visibleTasks) { _, t ->
-                                val indexInAll = tasksUi.indexOfFirst { it.id == t.id }
-
-                                TaskCardPremium(
-                                    task = t,
-                                    running = isRunning(t),
-                                    scheduled = isScheduled(t),
-
-                                    onStart = {
-                                        ensureNotificationPermissionThen {
-
-                                            val pages = core.callAttr("load_pages", pagesPath)
-                                            core.callAttr("start_task_current_page", pages, indexInAll)
-                                            core.callAttr("save_pages", pagesPath, pages)
-
-                                            NotificationHelper.showReminder(
-                                                context = context,
-                                                title = "Started ▶",
-                                                message = t.name.ifBlank { "Task" }
-                                            )
-
-                                            val minutes = t.timerMinutesText.toIntOrNull()
-                                            if (minutes != null && minutes > 0) {
-                                                TimerForegroundService.startTimer(context, t.id, t.name, minutes)
-                                            }
-
-                                            sendPagesUpdated()
-                                        }
-                                    },
-
-                                    onDone = {
-                                        val reqCode = taskIdToRequestCode(t.id)
-                                        AlarmScheduler.cancel(context, reqCode)
-                                        TimerForegroundService.stopTimer(context)
-
-                                        val pages = core.callAttr("load_pages", pagesPath)
-                                        core.callAttr("mark_task_done_current_page", pages, indexInAll)
-                                        core.callAttr("save_pages", pagesPath, pages)
-
-                                        ensureNotificationPermissionThen {
-                                            NotificationHelper.showReminder(
-                                                context = context,
-                                                title = "Completed ✅",
-                                                message = t.name.ifBlank { "Task" }
-                                            )
-                                        }
-
-                                        sendPagesUpdated()
-                                        // re-check after marking done
-                                        refreshFromPages()
-                                        checkIfAllCompletedAndGoNext()
-                                    },
-
-                                    onDelete = {
-                                        val reqCode = taskIdToRequestCode(t.id)
-                                        AlarmScheduler.cancel(context, reqCode)
-                                        TimerForegroundService.stopTimer(context)
-
-                                        val pages = core.callAttr("load_pages", pagesPath)
-                                        core.callAttr("delete_task_current_page", pages, indexInAll)
-                                        core.callAttr("save_pages", pagesPath, pages)
-
-                                        sendPagesUpdated()
-                                        refreshFromPages()
-                                        checkIfAllCompletedAndGoNext()
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // ===== Add Task bottom sheet =====
+                // ✅ Add Task BottomSheet (Infinite only, because FAB is hidden in Journey)
                 if (showAddSheet) {
                     ModalBottomSheet(
                         onDismissRequest = { showAddSheet = false },
                         sheetState = sheetState
                     ) {
+
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -851,7 +1380,10 @@ class MainActivity : ComponentActivity() {
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                             contentPadding = PaddingValues(bottom = 22.dp)
                         ) {
-                            item { Text("Create Task", style = MaterialTheme.typography.headlineSmall) }
+
+                            item {
+                                Text("Create Task", style = MaterialTheme.typography.headlineSmall)
+                            }
 
                             item {
                                 TextField(
@@ -863,7 +1395,12 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-                            item { Text("Quick timer", style = MaterialTheme.typography.labelLarge) }
+                            item {
+                                Text(
+                                    "Quick timer",
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
 
                             item {
                                 Row(
@@ -872,18 +1409,30 @@ class MainActivity : ComponentActivity() {
                                         .fillMaxWidth()
                                         .horizontalScroll(rememberScrollState())
                                 ) {
-                                    AssistChip(onClick = { timerInput = "1" }, label = { Text("1m") })
-                                    AssistChip(onClick = { timerInput = "5" }, label = { Text("5m") })
-                                    AssistChip(onClick = { timerInput = "10" }, label = { Text("10m") })
-                                    AssistChip(onClick = { timerInput = "25" }, label = { Text("25m") })
-                                    AssistChip(onClick = { timerInput = "" }, label = { Text("No") })
+                                    AssistChip(
+                                        onClick = { timerInput = "1" },
+                                        label = { Text("1m") })
+                                    AssistChip(
+                                        onClick = { timerInput = "5" },
+                                        label = { Text("5m") })
+                                    AssistChip(
+                                        onClick = { timerInput = "10" },
+                                        label = { Text("10m") })
+                                    AssistChip(
+                                        onClick = { timerInput = "25" },
+                                        label = { Text("25m") })
+                                    AssistChip(
+                                        onClick = { timerInput = "" },
+                                        label = { Text("No") })
                                 }
                             }
 
                             item {
                                 TextField(
                                     value = timerInput,
-                                    onValueChange = { timerInput = it.filter { ch -> ch.isDigit() } },
+                                    onValueChange = {
+                                        timerInput = it.filter { ch -> ch.isDigit() }
+                                    },
                                     label = { Text("Timer minutes (optional)") },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true
@@ -900,71 +1449,94 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
 
-                            item { Text("Schedule (optional)", style = MaterialTheme.typography.labelLarge) }
+                            item {
+                                Text(
+                                    "Schedule (optional)",
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
 
                             item {
                                 Row(
+                                    modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                    modifier = Modifier.fillMaxWidth()
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
+
                                     OutlinedButton(
                                         onClick = {
                                             val cal = Calendar.getInstance()
-                                            DatePickerDialog(
+                                            val dp = DatePickerDialog(
                                                 context,
                                                 { _, y, m, d ->
-                                                    val chosen = Calendar.getInstance()
-                                                    chosen.set(Calendar.YEAR, y)
-                                                    chosen.set(Calendar.MONTH, m)
-                                                    chosen.set(Calendar.DAY_OF_MONTH, d)
+                                                    val picked = Calendar.getInstance()
+                                                    picked.set(Calendar.YEAR, y)
+                                                    picked.set(Calendar.MONTH, m)
+                                                    picked.set(Calendar.DAY_OF_MONTH, d)
 
-                                                    TimePickerDialog(
+                                                    val tp = TimePickerDialog(
                                                         context,
                                                         { _, hh, mm ->
-                                                            chosen.set(Calendar.HOUR_OF_DAY, hh)
-                                                            chosen.set(Calendar.MINUTE, mm)
-                                                            chosen.set(Calendar.SECOND, 0)
-                                                            chosen.set(Calendar.MILLISECOND, 0)
+                                                            picked.set(Calendar.HOUR_OF_DAY, hh)
+                                                            picked.set(Calendar.MINUTE, mm)
+                                                            picked.set(Calendar.SECOND, 0)
+                                                            picked.set(Calendar.MILLISECOND, 0)
 
-                                                            scheduledMillis = chosen.timeInMillis
-                                                            scheduledLabel = prettyFromMillis(chosen.timeInMillis)
+                                                            val ms = picked.timeInMillis
+                                                            scheduledMillis = ms
+                                                            scheduledLabel = prettyFromMillis(ms)
                                                         },
                                                         cal.get(Calendar.HOUR_OF_DAY),
                                                         cal.get(Calendar.MINUTE),
                                                         false
-                                                    ).show()
+                                                    )
+                                                    tp.show()
                                                 },
                                                 cal.get(Calendar.YEAR),
                                                 cal.get(Calendar.MONTH),
                                                 cal.get(Calendar.DAY_OF_MONTH)
-                                            ).show()
+                                            )
+                                            dp.show()
                                         },
+                                        shape = RoundedCornerShape(14.dp),
                                         modifier = Modifier.weight(1f),
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.onSurface),
-                                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                                            brush = Brush.linearGradient(listOf(cs.primary, cs.secondary))
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = Color.White.copy(alpha = 0.92f),
+                                            contentColor = Color(0xFF0B0F1A)
                                         )
                                     ) {
                                         Icon(Icons.Filled.Schedule, contentDescription = null)
                                         Spacer(Modifier.width(8.dp))
                                         Text(
-                                            if (scheduledLabel.isBlank()) "Pick date & time" else scheduledLabel,
+                                            if (scheduledLabel.isBlank()) "Set schedule" else "Edit schedule",
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
-                                            color = cs.onSurface
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                     }
 
                                     OutlinedButton(
-                                        onClick = { scheduledMillis = null; scheduledLabel = "" },
-                                        modifier = Modifier.widthIn(min = 88.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.onSurface),
-                                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                                            brush = Brush.linearGradient(listOf(cs.primary, cs.secondary))
+                                        onClick = {
+                                            scheduledMillis = null
+                                            scheduledLabel = ""
+                                        },
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = Color(0xFFFFE8E8),
+                                            contentColor = Color(0xFFD32F2F)
                                         )
                                     ) {
-                                        Text("Clear", maxLines = 1, color = cs.onSurface)
+                                        Text("Clear", fontWeight = FontWeight.SemiBold)
                                     }
+                                }
+                            }
+
+                            if (scheduledLabel.isNotBlank()) {
+                                item {
+                                    Text(
+                                        "Scheduled: $scheduledLabel",
+                                        color = cs.onSurfaceVariant
+                                    )
                                 }
                             }
 
@@ -973,215 +1545,90 @@ class MainActivity : ComponentActivity() {
                                     onClick = {
                                         val name = nameInput.trim()
                                         if (name.isBlank()) {
-                                            Toast.makeText(context, "Enter task name", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(
+                                                context,
+                                                "Enter task name",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                             return@Button
                                         }
 
-                                        val timerMinutes = timerInput.trim().toIntOrNull()
-                                        val reward = rewardInput.trim().takeIf { it.isNotBlank() }
-                                        val scheduledIso = scheduledMillis?.let { isoFromMillis(it) }
+                                        val minutes = timerInput.trim().toIntOrNull()
+                                        val reward = rewardInput.trim().ifBlank { null }
+                                        val schedIso: String? =
+                                            scheduledMillis?.let { isoFromMillis(it) }
 
-                                        val pages = core.callAttr("load_pages", pagesPath)
-                                        val task = core.callAttr("build_task", name, timerMinutes, reward, scheduledIso)
-                                        core.callAttr("add_task_to_current_page", pages, task)
-                                        core.callAttr("save_pages", pagesPath, pages)
+                                        try {
+                                            val pages = core.callAttr("load_pages", pagesPath)
 
-                                        val taskId = task.asMap()[PyObject.fromJava("id")]?.toString().orEmpty()
-                                        val reqCode = taskIdToRequestCode(taskId)
-                                        val triggerAt = scheduledMillis
+                                            val taskObj = core.callAttr(
+                                                "build_task",
+                                                name,
+                                                minutes,
+                                                reward,
+                                                schedIso
+                                            )
 
-                                        if (triggerAt != null) {
-                                            ensureNotificationPermissionThen {
-                                                val ok = AlarmScheduler.scheduleAllowWhileIdle(
-                                                    context = context,
-                                                    requestCode = reqCode,
-                                                    triggerAtMillis = triggerAt,
-                                                    taskId = taskId,
-                                                    taskName = name,
-                                                    timerMinutes = timerMinutes ?: 0
-                                                )
-                                                if (!ok) {
-                                                    Toast.makeText(
-                                                        context,
-                                                        "Could not schedule alarm. Please try again.",
-                                                        Toast.LENGTH_LONG
-                                                    ).show()
-                                                } else {
-                                                    NotificationHelper.showReminder(
-                                                        context = context,
-                                                        title = "Scheduled ⏰",
-                                                        message = name
-                                                    )
+                                            core.callAttr(
+                                                "add_task_to_current_page",
+                                                pages,
+                                                taskObj
+                                            )
+                                            core.callAttr("save_pages", pagesPath, pages)
+
+                                            if (scheduledMillis != null) {
+                                                val ms = scheduledMillis!!
+
+                                                ensureNotificationPermissionThen {
+                                                    try {
+                                                        val taskMap = taskObj.asMap()
+                                                        val taskId =
+                                                            taskMap[PyObject.fromJava("id")]?.toString()
+                                                                .orEmpty()
+                                                        val reqCode = taskIdToRequestCode(taskId)
+
+                                                        val ok =
+                                                            AlarmScheduler.scheduleAllowWhileIdle(
+                                                                context = context,
+                                                                requestCode = reqCode,
+                                                                triggerAtMillis = ms,
+                                                                taskId = taskId,
+                                                                taskName = name,
+                                                                timerMinutes = minutes ?: 0
+                                                            )
+
+                                                        Toast.makeText(
+                                                            context,
+                                                            if (ok) "Scheduled ✅" else "Schedule failed ❌",
+                                                            Toast.LENGTH_LONG
+                                                        ).show()
+                                                    } catch (_: Exception) {
+                                                        Toast.makeText(
+                                                            context,
+                                                            "Schedule failed ❌",
+                                                            Toast.LENGTH_LONG
+                                                        ).show()
+                                                    }
                                                 }
                                             }
+
+                                            sendPagesUpdated()
+                                            refreshFromPages()
+                                            showAddSheet = false
+
+                                        } catch (e: Exception) {
+                                            Toast.makeText(
+                                                context,
+                                                "Save failed: ${e.message}",
+                                                Toast.LENGTH_LONG
+                                            ).show()
                                         }
-
-                                        nameInput = ""
-                                        timerInput = ""
-                                        rewardInput = ""
-                                        scheduledMillis = null
-                                        scheduledLabel = ""
-                                        showAddSheet = false
-
-                                        sendPagesUpdated()
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(14.dp)
                                 ) {
-                                    Text("Create")
+                                    Text("Save Task", fontWeight = FontWeight.SemiBold)
                                 }
-                            }
-
-                            item { Spacer(Modifier.height(6.dp)) }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    @Composable
-    private fun TaskCardPremium(
-        task: TaskUi,
-        running: Boolean,
-        scheduled: Boolean,
-        onStart: () -> Unit,
-        onDone: () -> Unit,
-        onDelete: () -> Unit
-    ) {
-        val cs = MaterialTheme.colorScheme
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = cs.surface)
-        ) {
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    task.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.horizontalScroll(rememberScrollState())
-                ) {
-                    if (running) AssistChip(onClick = {}, label = { Text("Running") })
-                    if (task.completed) AssistChip(onClick = {}, label = { Text("Completed") })
-                    if (scheduled) AssistChip(onClick = {}, label = { Text("Scheduled") })
-                }
-
-                val meta = buildString {
-                    if (task.scheduledStartText.isNotBlank()) append("Scheduled: ${task.scheduledStartText}")
-                    if (task.timerMinutesText.isNotBlank()) {
-                        if (isNotEmpty()) append("  •  ")
-                        append("${task.timerMinutesText} min")
-                    }
-                    if (task.rewardText.isNotBlank()) {
-                        if (isNotEmpty()) append("  •  ")
-                        append("Reward: ${task.rewardText}")
-                    }
-                }
-                if (meta.isNotBlank()) {
-                    Text(meta, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
-                }
-
-                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                    val compact = maxWidth < 360.dp
-
-                    val outlineBorder = ButtonDefaults.outlinedButtonBorder.copy(
-                        brush = Brush.linearGradient(listOf(cs.primary, cs.secondary))
-                    )
-
-                    if (compact) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Button(
-                                onClick = onStart,
-                                enabled = !task.completed,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(14.dp),
-                                contentPadding = PaddingValues(vertical = 10.dp)
-                            ) {
-                                Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                                Spacer(Modifier.width(6.dp))
-                                Text("Start", maxLines = 1)
-                            }
-
-                            OutlinedButton(
-                                onClick = onDone,
-                                enabled = !task.completed,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(14.dp),
-                                contentPadding = PaddingValues(vertical = 10.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.onSurface),
-                                border = outlineBorder
-                            ) {
-                                Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = cs.onSurface)
-                                Spacer(Modifier.width(6.dp))
-                                Text("Done", maxLines = 1, color = cs.onSurface)
-                            }
-
-                            OutlinedButton(
-                                onClick = onDelete,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(14.dp),
-                                contentPadding = PaddingValues(vertical = 10.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.error),
-                                border = outlineBorder
-                            ) {
-                                Icon(Icons.Filled.Delete, contentDescription = null, tint = cs.error)
-                                Spacer(Modifier.width(6.dp))
-                                Text("Delete", maxLines = 1, color = cs.error)
-                            }
-                        }
-                    } else {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Button(
-                                onClick = onStart,
-                                enabled = !task.completed,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(14.dp)
-                            ) {
-                                Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                                Spacer(Modifier.width(6.dp))
-                                Text("Start")
-                            }
-
-                            OutlinedButton(
-                                onClick = onDone,
-                                enabled = !task.completed,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.onSurface),
-                                border = outlineBorder
-                            ) {
-                                Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = cs.onSurface)
-                                Spacer(Modifier.width(6.dp))
-                                Text("Done", color = cs.onSurface)
-                            }
-
-                            OutlinedButton(
-                                onClick = onDelete,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.error),
-                                border = outlineBorder
-                            ) {
-                                Icon(Icons.Filled.Delete, contentDescription = null, tint = cs.error)
-                                Spacer(Modifier.width(6.dp))
-                                Text("Delete", color = cs.error)
                             }
                         }
                     }

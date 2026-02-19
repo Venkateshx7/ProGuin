@@ -276,3 +276,17 @@ def delete_task_by_id(pages, task_id: str):
                 tasks.pop(i)
                 return True
     return False
+
+# -------------------------
+# NEW: Schedule helper (Journey Schedule button)
+# -------------------------
+
+def set_task_schedule_by_id(pages, task_id: str, scheduled_iso: str):
+    pages = _normalize_pages(pages)
+    pages_container = pages.get("pages", {})
+    for _, page in pages_container.items():
+        for t in page.get("tasks", []):
+            if t.get("id") == task_id:
+                t["scheduled_start"] = scheduled_iso
+                return True
+    return False

@@ -1,5 +1,6 @@
 package com.venkatesh.proguin.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,14 +12,11 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-
-// Use your alias type in MainActivity:
-// private typealias Task = TaskUi
-// This file expects these fields:
-// task.name, task.timerMinutesText, task.rewardText, task.scheduledStartText, task.completed
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun ProTaskCard(
@@ -33,16 +31,21 @@ fun ProTaskCard(
 ) {
     val cs = MaterialTheme.colorScheme
 
+    val container = cs.surface.copy(alpha = 0.94f)
+    val border = cs.outlineVariant.copy(alpha = 0.60f)
+
     Surface(
         tonalElevation = 6.dp,
         shadowElevation = 10.dp,
         shape = RoundedCornerShape(20.dp),
-        color = cs.surface
+        color = container,
+        border = BorderStroke(1.dp, border)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
@@ -52,23 +55,17 @@ fun ProTaskCard(
                 color = cs.onSurface
             )
 
-            // Status chip (high contrast)
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 AssistChip(
                     onClick = {},
-                    label = {
-                        Text(
-                            status,
-                            fontWeight = FontWeight.SemiBold,
-                            color = cs.onSurfaceVariant
-                        )
-                    },
+                    label = { Text(status, fontWeight = FontWeight.SemiBold) },
                     colors = AssistChipDefaults.assistChipColors(
-                        containerColor = cs.surfaceVariant
-                    )
+                        containerColor = cs.surfaceVariant.copy(alpha = 0.85f)
+                    ),
+                    border = BorderStroke(1.dp, cs.outlineVariant.copy(alpha = 0.55f))
                 )
             }
 
@@ -82,51 +79,58 @@ fun ProTaskCard(
                 )
             }
 
-            // Buttons
+            // ✅ Premium Bright Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+
                 Button(
                     onClick = onStart,
                     enabled = !completed,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = cs.primary,
-                        contentColor = cs.onPrimary
+                        containerColor = Color(0xFF00D2FF),
+                        contentColor = Color.Black,
+                        disabledContainerColor = Color(0xFFB0BEC5),
+                        disabledContentColor = Color.DarkGray
                     )
                 ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                    Icon(Icons.Filled.PlayArrow, null)
                     Spacer(Modifier.width(6.dp))
-                    Text("Start", fontWeight = FontWeight.SemiBold)
+                    Text("Start", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
 
-                OutlinedButton(
+                Button(
                     onClick = onDone,
                     enabled = !completed,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = cs.onSurface
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF00C853),
+                        contentColor = Color.White,
+                        disabledContainerColor = Color(0xFFBDBDBD),
+                        disabledContentColor = Color.DarkGray
                     )
                 ) {
-                    Icon(Icons.Filled.CheckCircle, contentDescription = null)
+                    Icon(Icons.Filled.CheckCircle, null)
                     Spacer(Modifier.width(6.dp))
-                    Text("Done", fontWeight = FontWeight.SemiBold)
+                    Text("Done", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
 
-                OutlinedButton(
+                Button(
                     onClick = onDelete,
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = cs.error
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFD50000),
+                        contentColor = Color.White
                     )
                 ) {
-                    Icon(Icons.Filled.Delete, contentDescription = null)
+                    Icon(Icons.Filled.Delete, null)
                     Spacer(Modifier.width(6.dp))
-                    Text("Delete", fontWeight = FontWeight.SemiBold)
+                    Text("Delete", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
             }
         }

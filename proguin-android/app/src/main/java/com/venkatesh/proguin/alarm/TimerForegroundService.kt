@@ -4,178 +4,52 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.os.CountDownTimer
 import android.os.IBinder
+import android.os.SystemClock
 import androidx.core.app.NotificationManagerCompat
+import kotlinx.coroutines.*
+import kotlin.math.max
 
 class TimerForegroundService : Service() {
 
-    private var taskId: String = ""
-    private var taskName: String = ""
-    private var totalSeconds: Int = 0
-    private var secondsLeft: Int = 0
-    private var running: Boolean = false
-
-    private var timer: CountDownTimer? = null
-
-    override fun onBind(intent: Intent?): IBinder? = null
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        NotificationHelper.ensureChannels(this)
-
-        when (intent?.action) {
-            ACT_START -> {
-                taskId = intent.getStringExtra(EXTRA_TASK_ID).orEmpty()
-                taskName = intent.getStringExtra(EXTRA_TASK_NAME).orEmpty()
-                val minutes = intent.getIntExtra(EXTRA_MINUTES, 0)
-                if (minutes <= 0 || taskId.isBlank()) {
-                    stopSelf()
-                    return START_NOT_STICKY
-                }
-                totalSeconds = minutes * 60
-                secondsLeft = totalSeconds
-                running = true
-                persistState(active = true)
-                startAsForeground()
-                startCountdown()
-            }
-
-            ACT_PAUSE -> pauseInternal()
-            ACT_RESUME -> resumeInternal()
-            ACT_STOP -> stopInternal()
-        }
-
-        return START_STICKY
-    }
-
-    private fun startAsForeground() {
-        val notifText = formatTime(secondsLeft)
-        val notification = NotificationHelper.buildTimerNotification(
-            context = this,
-            notifId = NOTIF_ID,
-            taskId = taskId,
-            taskName = taskName.ifBlank { "Timer" },
-            contentText = "Remaining: $notifText",
-            isRunning = running
-        )
-        startForeground(NOTIF_ID, notification)
-    }
-
-    private fun updateNotification() {
-        val notifText = formatTime(secondsLeft)
-        val notification = NotificationHelper.buildTimerNotification(
-            context = this,
-            notifId = NOTIF_ID,
-            taskId = taskId,
-            taskName = taskName.ifBlank { "Timer" },
-            contentText = if (running) "Remaining: $notifText" else "Paused: $notifText",
-            isRunning = running
-        )
-        NotificationManagerCompat.from(this).notify(NOTIF_ID, notification)
-    }
-
-    private fun startCountdown() {
-        timer?.cancel()
-        timer = object : CountDownTimer(secondsLeft * 1000L, 1000L) {
-            override fun onTick(ms: Long) {
-                secondsLeft = (ms / 1000L).toInt().coerceAtLeast(0)
-                persistState(active = true)
-                updateNotification()
-            }
-
-            override fun onFinish() {
-                secondsLeft = 0
-                running = false
-                updateNotification()
-                persistState(active = false)
-
-                NotificationHelper.showReminder(
-                    context = this@TimerForegroundService,
-                    title = "Timer done ✅",
-                    message = taskName.ifBlank { "Task" }
-                )
-
-                sendBroadcast(Intent("com.venkatesh.proguin.PAGES_UPDATED").apply {
-                    setPackage(packageName)
-                })
-
-                stopInternal()
-            }
-        }.start()
-    }
-
-    private fun pauseInternal() {
-        if (!running) return
-        running = false
-        timer?.cancel()
-        persistState(active = true)
-        updateNotification()
-    }
-
-    private fun resumeInternal() {
-        if (running) return
-        if (secondsLeft <= 0) return
-        running = true
-        persistState(active = true)
-        updateNotification()
-        startCountdown()
-    }
-
-    private fun stopInternal() {
-        timer?.cancel()
-        running = false
-        secondsLeft = 0
-        persistState(active = false)
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
-    }
-
-    private fun persistState(active: Boolean) {
-        val p = getSharedPreferences(PREF, Context.MODE_PRIVATE)
-        p.edit()
-            .putBoolean(KEY_ACTIVE, active)
-            .putString(KEY_TASK_ID, if (active) taskId else "")
-            .putString(KEY_TASK_NAME, if (active) taskName else "")
-            .putInt(KEY_TOTAL_SEC, totalSeconds)
-            .putInt(KEY_LEFT_SEC, secondsLeft)
-            .putBoolean(KEY_RUNNING, running)
-            .apply()
-    }
-
-    override fun onDestroy() {
-        timer?.cancel()
-        super.onDestroy()
-    }
-
-    private fun formatTime(sec: Int): String {
-        val m = (sec / 60).coerceAtLeast(0)
-        val s = (sec % 60).coerceAtLeast(0)
-        return "%02d:%02d".format(m, s)
-    }
-
     companion object {
-        private const val PREF = "proguin_timer"
-        private const val KEY_ACTIVE = "active"
-        private const val KEY_TASK_ID = "task_id"
-        private const val KEY_TASK_NAME = "task_name"
-        private const val KEY_TOTAL_SEC = "total_sec"
-        private const val KEY_LEFT_SEC = "left_sec"
-        private const val KEY_RUNNING = "running"
-
-        private const val NOTIF_ID = 4117
-
-        private const val ACT_START = "ACT_START"
-        private const val ACT_PAUSE = "ACT_PAUSE"
-        private const val ACT_RESUME = "ACT_RESUME"
-        private const val ACT_STOP = "ACT_STOP"
+        private const val ACTION_START = "com.venkatesh.proguin.TIMER_START"
+        private const val ACTION_STOP = "com.venkatesh.proguin.TIMER_STOP"
+        private const val ACTION_PAUSE = "com.venkatesh.proguin.TIMER_PAUSE"
+        private const val ACTION_RESUME = "com.venkatesh.proguin.TIMER_RESUME"
 
         private const val EXTRA_TASK_ID = "taskId"
         private const val EXTRA_TASK_NAME = "taskName"
         private const val EXTRA_MINUTES = "minutes"
 
+        private const val SP_NAME = "proguin_timer_state"
+        private const val KEY_ACTIVE_TASK_ID = "active_task_id"
+
+        private fun setActiveTaskId(context: Context, taskId: String) {
+            context.getSharedPreferences(SP_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_ACTIVE_TASK_ID, taskId)
+                .apply()
+        }
+
+        private fun clearActiveTaskId(context: Context) {
+            context.getSharedPreferences(SP_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .remove(KEY_ACTIVE_TASK_ID)
+                .apply()
+        }
+
+        fun getActiveTaskId(context: Context): String {
+            return context.getSharedPreferences(SP_NAME, Context.MODE_PRIVATE)
+                .getString(KEY_ACTIVE_TASK_ID, "")
+                .orEmpty()
+        }
+
         fun startTimer(context: Context, taskId: String, taskName: String, minutes: Int) {
+            setActiveTaskId(context, taskId)
+
             val i = Intent(context, TimerForegroundService::class.java).apply {
-                action = ACT_START
+                action = ACTION_START
                 putExtra(EXTRA_TASK_ID, taskId)
                 putExtra(EXTRA_TASK_NAME, taskName)
                 putExtra(EXTRA_MINUTES, minutes)
@@ -183,37 +57,234 @@ class TimerForegroundService : Service() {
             if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(i) else context.startService(i)
         }
 
-        fun pauseTimer(context: Context) {
-            val i = Intent(context, TimerForegroundService::class.java).apply { action = ACT_PAUSE }
+        fun stopTimer(context: Context, taskId: String) {
+            clearActiveTaskId(context)
+
+            val i = Intent(context, TimerForegroundService::class.java).apply {
+                action = ACTION_STOP
+                putExtra(EXTRA_TASK_ID, taskId)
+            }
             context.startService(i)
         }
 
-        fun resumeTimer(context: Context) {
-            val i = Intent(context, TimerForegroundService::class.java).apply { action = ACT_RESUME }
+        fun pauseTimer(context: Context, taskId: String, taskName: String) {
+            val i = Intent(context, TimerForegroundService::class.java).apply {
+                action = ACTION_PAUSE
+                putExtra(EXTRA_TASK_ID, taskId)
+                putExtra(EXTRA_TASK_NAME, taskName)
+            }
             context.startService(i)
         }
 
-        fun stopTimer(context: Context) {
-            val i = Intent(context, TimerForegroundService::class.java).apply { action = ACT_STOP }
+        fun resumeTimer(context: Context, taskId: String, taskName: String) {
+            setActiveTaskId(context, taskId)
+
+            val i = Intent(context, TimerForegroundService::class.java).apply {
+                action = ACTION_RESUME
+                putExtra(EXTRA_TASK_ID, taskId)
+                putExtra(EXTRA_TASK_NAME, taskName)
+            }
             context.startService(i)
-        }
-
-        fun getActiveTaskId(context: Context): String {
-            val p = context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
-            val active = p.getBoolean(KEY_ACTIVE, false)
-            return if (active) p.getString(KEY_TASK_ID, "") ?: "" else ""
-        }
-
-        fun getTimerLeftSeconds(context: Context): Int {
-            val p = context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
-            return p.getInt(KEY_LEFT_SEC, 0)
-        }
-
-        fun isRunning(context: Context): Boolean {
-            val p = context.getSharedPreferences(PREF, Context.MODE_PRIVATE)
-            return p.getBoolean(KEY_RUNNING, false)
         }
     }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var tickJob: Job? = null
+
+    private var running = false
+    private var remainingMs = 0L
+    private var lastStartElapsed = 0L
+
+    private var currentTaskId = ""
+    private var currentTaskName = ""
+    private var currentNotifId = 0
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val act = intent?.action.orEmpty()
+
+        when (act) {
+
+            ACTION_START -> {
+
+                // ✅ Set ids first (fast)
+                currentTaskId = intent?.getStringExtra(EXTRA_TASK_ID).orEmpty()
+                currentTaskName = intent?.getStringExtra(EXTRA_TASK_NAME).orEmpty()
+                currentNotifId = NotificationHelper.timerNotifId(currentTaskId)
+
+                // ✅ Call startForeground ASAP (prevents ForegroundServiceDidNotStartInTimeException)
+                // NOTE: remainingMs may be 0 initially, we will stop immediately after if needed.
+                remainingMs = 1_000L
+                startForegroundNow(isRunning = true)
+
+                val minutes = intent?.getIntExtra(EXTRA_MINUTES, 0) ?: 0
+                remainingMs = max(0, minutes) * 60_000L
+
+                // ✅ If minutes is 0, do not keep foreground service alive
+                if (remainingMs <= 0L) {
+                    clearActiveTaskId(this)
+                    stopEverything(currentNotifId)
+                    return START_NOT_STICKY
+                }
+
+                // ✅ Ensure notification updates to correct time right away
+                updateNotification(isRunning = true)
+
+                startTicking()
+            }
+
+            ACTION_STOP -> {
+                val taskId = intent?.getStringExtra(EXTRA_TASK_ID).orEmpty()
+                val notifId = NotificationHelper.timerNotifId(taskId.ifBlank { currentTaskId })
+
+                clearActiveTaskId(this)
+                stopEverything(notifId)
+            }
+
+            ACTION_PAUSE -> pauseInternal()
+
+            ACTION_RESUME -> {
+                if (currentTaskId.isNotBlank()) setActiveTaskId(this, currentTaskId)
+                resumeInternal()
+            }
+        }
+
+        return START_NOT_STICKY
+    }
+
+    private fun startForegroundNow(isRunning: Boolean) {
+        NotificationHelper.ensureChannels(this)
+        val text = formatRemaining(remainingMs)
+
+        val notif = NotificationHelper.buildTimerNotification(
+            context = this,
+            notifId = currentNotifId,
+            taskId = currentTaskId,
+            taskName = currentTaskName,
+            contentText = if (isRunning) "Running • $text" else "Paused • $text",
+            isRunning = isRunning
+        )
+
+        try {
+            startForeground(currentNotifId, notif)
+        } catch (_: Exception) {
+            // if foreground fails, stop to avoid crash loop
+            stopEverything(currentNotifId)
+        }
+    }
+
+    private fun updateNotification(isRunning: Boolean) {
+        val text = formatRemaining(remainingMs)
+
+        val notif = NotificationHelper.buildTimerNotification(
+            context = this,
+            notifId = currentNotifId,
+            taskId = currentTaskId,
+            taskName = currentTaskName,
+            contentText = if (isRunning) "Running • $text" else "Paused • $text",
+            isRunning = isRunning
+        )
+
+        NotificationHelper.safeNotify(this, currentNotifId, notif)
+    }
+
+    private fun startTicking() {
+        tickJob?.cancel()
+        running = true
+        lastStartElapsed = SystemClock.elapsedRealtime()
+
+        tickJob = scope.launch {
+            while (isActive && running) {
+                delay(1000)
+
+                val now = SystemClock.elapsedRealtime()
+                val passed = now - lastStartElapsed
+                lastStartElapsed = now
+
+                remainingMs = (remainingMs - passed).coerceAtLeast(0L)
+
+                updateNotification(isRunning = true)
+
+                if (remainingMs <= 0L) {
+
+                    clearActiveTaskId(this@TimerForegroundService)
+
+                    // ✅ one-time sound via reminders channel
+                    try {
+                        NotificationHelper.showReminder(
+                            context = this@TimerForegroundService,
+                            title = "Time’s up ⏰",
+                            message = currentTaskName.ifBlank { "Work ended • Take a break" }
+                        )
+                    } catch (_: Exception) { }
+
+                    // ✅ Update pages.json: stop running
+                    try {
+                        val py = com.chaquo.python.Python.getInstance()
+                        val core = py.getModule("proguin.core")
+                        val pagesPath = java.io.File(filesDir, "pages.json").absolutePath
+                        val pages = core.callAttr("load_pages", pagesPath)
+
+                        try {
+                            core.callAttr("stop_task_by_id", pages, currentTaskId)
+                        } catch (_: Exception) {
+                            try { core.callAttr("set_task_running", pages, currentTaskId, false) } catch (_: Exception) { }
+                        }
+
+                        core.callAttr("save_pages", pagesPath, pages)
+                    } catch (_: Exception) { }
+
+                    // ✅ Refresh UI
+                    try {
+                        sendBroadcast(
+                            Intent("com.venkatesh.proguin.PAGES_UPDATED").apply {
+                                setPackage(packageName)
+                            }
+                        )
+                    } catch (_: Exception) { }
+
+                    stopEverything(currentNotifId)
+                    break
+                }
+            }
+        }
+    }
+
+    private fun pauseInternal() {
+        if (!running) return
+        running = false
+        tickJob?.cancel()
+        updateNotification(isRunning = false)
+    }
+
+    private fun resumeInternal() {
+        if (running) return
+        startForegroundNow(isRunning = true)
+        startTicking()
+    }
+
+    private fun stopEverything(notifId: Int) {
+        running = false
+        tickJob?.cancel()
+        tickJob = null
+
+        try { stopForeground(STOP_FOREGROUND_REMOVE) } catch (_: Exception) { }
+        try { NotificationManagerCompat.from(this).cancel(notifId) } catch (_: Exception) { }
+
+        stopSelf()
+    }
+
+    private fun formatRemaining(ms: Long): String {
+        val totalSec = (ms / 1000).toInt()
+        val m = totalSec / 60
+        val s = totalSec % 60
+        return "%02d:%02d".format(m, s)
+    }
+
+    override fun onDestroy() {
+        tickJob?.cancel()
+        scope.cancel()
+        super.onDestroy()
+    }
 }
-
-

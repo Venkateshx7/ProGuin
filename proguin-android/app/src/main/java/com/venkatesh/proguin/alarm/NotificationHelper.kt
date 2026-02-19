@@ -1,7 +1,6 @@
 package com.venkatesh.proguin.alarm
 
 import android.app.Notification
-import com.venkatesh.proguin.data.SettingsStore
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -11,6 +10,8 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.venkatesh.proguin.MainActivity
+import com.venkatesh.proguin.data.SettingsStore
+import kotlin.math.abs
 
 object NotificationHelper {
 
@@ -28,19 +29,42 @@ object NotificationHelper {
     const val EXTRA_TASK_ID = "taskId"
     const val EXTRA_TASK_NAME = "taskName"
 
+    // ✅ Stable notification id per task
+    private const val TIMER_NOTIF_BASE = 20000
+
+    fun timerNotifId(taskId: String): Int {
+        val h = abs(taskId.hashCode())
+        return TIMER_NOTIF_BASE + (h % 10000)
+    }
+
+    fun cancelNotificationById(context: Context, id: Int) {
+        try {
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.cancel(id)
+        } catch (_: Exception) {
+        }
+    }
+
+    fun cancelTimerNotification(context: Context, taskId: String) {
+        cancelNotificationById(context, timerNotifId(taskId))
+    }
+
     fun ensureChannels(context: Context) {
         if (Build.VERSION.SDK_INT < 26) return
+
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+        // ✅ Reminders: should make normal sound (like "now start", "time up", scheduled)
         if (nm.getNotificationChannel(CH_REMINDERS) == null) {
             val ch = NotificationChannel(
                 CH_REMINDERS,
                 "Reminders",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH // ✅ sound + heads-up (normal)
             )
             nm.createNotificationChannel(ch)
         }
 
+        // ✅ Timers: ongoing should be silent
         if (nm.getNotificationChannel(CH_TIMER) == null) {
             val ch = NotificationChannel(
                 CH_TIMER,
@@ -54,6 +78,7 @@ object NotificationHelper {
         }
     }
 
+
     private fun openAppPendingIntent(context: Context): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -63,6 +88,7 @@ object NotificationHelper {
         return PendingIntent.getActivity(context, 1000, intent, flags)
     }
 
+    // ✅ Keep this only if you want scheduled reminders. Do NOT call this for manual Start.
     fun showReminder(context: Context, title: String, message: String) {
         ensureChannels(context)
 
@@ -121,11 +147,7 @@ object NotificationHelper {
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setContentIntent(openAppPendingIntent(context))
 
-        if (isRunning) {
-            b.addAction(0, "Pause", piPause)
-        } else {
-            b.addAction(0, "Resume", piResume)
-        }
+        if (isRunning) b.addAction(0, "Pause", piPause) else b.addAction(0, "Resume", piResume)
         b.addAction(0, "Stop", piStop)
         b.addAction(0, "Done", piDone)
 

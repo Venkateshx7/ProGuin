@@ -1,6 +1,7 @@
 package com.venkatesh.proguin.ui
 
 import androidx.compose.foundation.background
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -8,10 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 @Composable
 fun ModeSelectScreen(
@@ -19,120 +19,100 @@ fun ModeSelectScreen(
     onInfinite: () -> Unit,
     onBack: () -> Unit
 ) {
-    val bg = Brush.verticalGradient(
-        colors = listOf(
-            MaterialTheme.colorScheme.surface,
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
-            MaterialTheme.colorScheme.tertiary.copy(alpha = 0.10f),
-            MaterialTheme.colorScheme.surface
-        )
-    )
+    BackHandler { onBack() }
+
+    val bgTop = Color(0xFFBFE9FF)      // brighter sky
+    val bgMid = Color(0xFFF4F7FF)      // soft white
+    val bgBottom = Color(0xFFE9C7FF)   // stronger pink/purple
+
+    val cardColor = Color(0xFFFFFFFF).copy(alpha = 0.92f)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(bg)
-            .padding(18.dp),
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        bgTop,
+                        bgMid,
+                        bgBottom
+                    )
+                )
+            ),
         contentAlignment = Alignment.Center
     ) {
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            tonalElevation = 6.dp,
-            shadowElevation = 10.dp,
-            color = MaterialTheme.colorScheme.surface
+
+        Card(
+            modifier = Modifier
+                .padding(18.dp)
+                .fillMaxWidth()
+                .wrapContentHeight(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = cardColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
         ) {
+
             Column(
-                modifier = Modifier
-                    .widthIn(max = 460.dp)
-                    .padding(22.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier.padding(18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "Choose your path",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(Modifier.height(6.dp))
 
                 Text(
-                    text = "Pick a mode. You can always switch later.",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
+                    "Choose your path",
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF111827)
                 )
 
-                Spacer(Modifier.height(18.dp))
+                Text(
+                    "Pick a mode. You can always switch later.",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color(0xFF374151)
+                )
 
-                // Primary CTA
+                // ✅ Primary (already visible)
                 Button(
                     onClick = onInfinite,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
+                        containerColor = Color(0xFF00D5FF),
+                        contentColor = Color(0xFF001018)
                     )
                 ) {
-                    Text(
-                        text = "Infinite Tasks",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Text("Infinite Tasks", fontWeight = FontWeight.SemiBold)
                 }
 
-                Spacer(Modifier.height(10.dp))
-
-                // Secondary CTA (disabled/coming soon look)
-                OutlinedButton(
+                // ✅ Make 74 days visible like primary (filled)
+                Button(
                     onClick = on74Days,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    enabled = true, // keep enabled if you want navigation; otherwise false
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.onSurface
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF7C3AED),  // strong purple
+                        contentColor = Color.White
                     )
                 ) {
-                    Text(
-                        text = "74 Days • 74 KMs (Coming Soon)",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Text("74 Days • 74 KMs", fontWeight = FontWeight.SemiBold)
                 }
 
-                Spacer(Modifier.height(12.dp))
-
-                // Back
-                OutlinedButton(
+                // ✅ Back should also be clearly visible (tonal filled)
+                FilledTonalButton(
                     onClick = onBack,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Text(
-                        text = "Back",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = Color(0xFFE5E7EB),
+                        contentColor = Color(0xFF111827)
                     )
+                ) {
+                    Text("Back", fontWeight = FontWeight.SemiBold)
                 }
-
-                Spacer(Modifier.height(6.dp))
 
                 Text(
-                    text = "Tip: Keep tasks small. Win daily.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
+                    "Tip: Keep tasks small. Win daily.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF374151)
                 )
             }
         }
