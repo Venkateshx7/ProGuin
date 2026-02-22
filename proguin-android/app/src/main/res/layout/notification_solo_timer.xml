@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/soloRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="12dp"
+    android:background="@drawable/solo_notif_bg">
+
+    <TextView
+        android:id="@+id/soloTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Quest"
+        android:textStyle="bold"
+        android:textSize="14sp"
+        android:textColor="#EAF2FF"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/soloRemaining"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/soloTitle"
+        android:layout_marginTop="6dp"
+        android:text="12:34"
+        android:textStyle="bold"
+        android:textSize="24sp"
+        android:textColor="#FFFFFF" />
+
+    <TextView
+        android:id="@+id/soloSystemLine"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/soloRemaining"
+        android:layout_marginTop="4dp"
+        android:text="🟣 SYSTEM: Running"
+        android:textSize="12sp"
+        android:textColor="#BBD0FF"
+        android:maxLines="2"
+        android:ellipsize="end" />
+
+    <ProgressBar
+        android:id="@+id/soloProgress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="6dp"
+        android:layout_below="@id/soloSystemLine"
+        android:layout_marginTop="10dp"
+        android:progress="40"
+        android:indeterminate="false" />
+
+    <!-- Minimal controls (compact) -->
+    <TextView
+        android:id="@+id/soloBtnPause"
+        android:layout_width="40dp"
+        android:layout_height="32dp"
+        android:layout_alignParentEnd="true"
+        android:layout_alignTop="@id/soloRemaining"
+        android:layout_marginStart="8dp"
+        android:gravity="center"
+        android:text="⏸"
+        android:textSize="14sp"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/solo_btn"
+        android:padding="0dp" />
+
+    <TextView
+        android:id="@+id/soloBtnStop"
+        android:layout_width="40dp"
+        android:layout_height="32dp"
+        android:layout_toStartOf="@id/soloBtnPause"
+        android:layout_alignTop="@id/soloRemaining"
+        android:layout_marginStart="8dp"
+        android:gravity="center"
+        android:text="🛑"
+        android:textSize="14sp"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/solo_btn"
+        android:padding="0dp" />
+
+</RelativeLayout>

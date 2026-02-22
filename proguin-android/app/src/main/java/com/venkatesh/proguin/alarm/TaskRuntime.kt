@@ -7,6 +7,7 @@ import java.io.File
 object TaskRuntime {
 
     fun start(context: Context, taskId: String, taskName: String, minutes: Int) {
+        var pageId = ""
         // pages.json -> running
         try {
             val py = com.chaquo.python.Python.getInstance()
@@ -14,13 +15,18 @@ object TaskRuntime {
             val pagesPath = File(context.filesDir, "pages.json").absolutePath
 
             val pages = core.callAttr("load_pages", pagesPath)
+            // best effort: resolve current page for deep link / timer notif
+            try {
+                val pagesMap = pages.asMap()
+                pageId = pagesMap[com.chaquo.python.PyObject.fromJava("current_page")]?.toString().orEmpty().replace("'", "")
+            } catch (_: Exception) { }
             core.callAttr("start_task_by_id", pages, taskId)
             core.callAttr("save_pages", pagesPath, pages)
         } catch (_: Exception) {
         }
 
         if (minutes > 0) {
-            TimerForegroundService.startTimer(context, taskId, taskName, minutes)
+            TimerForegroundService.startTimer(context, taskId, taskName, minutes, pageId = pageId)
         }
 
         refresh(context)

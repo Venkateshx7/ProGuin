@@ -12,30 +12,37 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkScheme = darkColorScheme(
-    primary = NeonCyan,
-    onPrimary = Color(0xFF001314),
+    primary = SL_NeonViolet,
+    onPrimary = Color.White,
 
-    secondary = NeonPink,
-    onSecondary = Color(0xFF1A0014),
+    secondary = SL_NeonBlue,
+    onSecondary = Color.Black,
 
-    tertiary = NeonPink,
+    tertiary = SL_NeonCyan,
+    onTertiary = Color.Black,
 
-    background = DarkBg,
-    surface = DarkSurface,
+    background = SL_Black,
+    surface = SL_Surface,
 
-    onBackground = Color.White,
-    onSurface = Color.White,
-    onSurfaceVariant = Color(0xFFE3E8F5)
+    onBackground = SL_Text,
+    onSurface = SL_Text,
+    surfaceVariant = SL_Deep,
+    onSurfaceVariant = SL_TextDim,
+
+    outline = SL_Stroke,
+    error = SL_Red,
+    onError = Color.White
 )
 
 private val LightScheme = lightColorScheme(
-    primary = NeonCyan,
-    onPrimary = Color(0xFF001314),
+    primary = SL_NeonViolet,
+    onPrimary = Color.White,
 
-    secondary = NeonPink,
-    onSecondary = Color(0xFF1A0014),
+    secondary = SL_NeonBlue,
+    onSecondary = Color.Black,
 
-    tertiary = NeonPink,
+    tertiary = SL_NeonCyan,
+    onTertiary = Color.Black,
 
     background = LightBg,
     surface = LightSurface,
@@ -47,7 +54,7 @@ private val LightScheme = lightColorScheme(
 
 @Composable
 fun ProGuinTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = true,
     dynamicColor: Boolean = false, // keep FALSE for your premium neon palette
     content: @Composable () -> Unit
 ) {

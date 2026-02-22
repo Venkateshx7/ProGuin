@@ -1,11 +1,13 @@
 package com.venkatesh.proguin.ui.theme
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import com.venkatesh.proguin.R
@@ -54,6 +56,21 @@ fun TasksScreenBackground(
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
+        )
+
+        // ✅ Solo-leveling vibe overlay (does NOT change the image assets)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            SL_Black.copy(alpha = 0.72f),
+                            SL_Deep.copy(alpha = 0.66f),
+                            SL_Black.copy(alpha = 0.78f)
+                        )
+                    )
+                )
         )
 
         content()

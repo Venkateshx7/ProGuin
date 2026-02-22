@@ -9,13 +9,20 @@
     <!-- Notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Reschedule alarms after reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <!-- Keep CPU awake when alarm fires -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- Optional: if user grants exact alarms -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
+    <!-- Google Drive backup requires network -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
+
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -48,13 +55,29 @@
         <service
             android:name=".alarm.TimerForegroundService"
             android:exported="false"
-            android:foregroundServiceType="shortService" />
+            android:foregroundServiceType="mediaPlayback" />
 
         <!-- Alarm sound service -->
         <service
             android:name=".alarm.AlarmSoundService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <receiver
+            android:name="com.venkatesh.proguin.alarm.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver android:name="com.venkatesh.proguin.widget.ProguinWidgetProvider" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/proguin_widget_info" />
+        </receiver>
 
     </application>
 </manifest>

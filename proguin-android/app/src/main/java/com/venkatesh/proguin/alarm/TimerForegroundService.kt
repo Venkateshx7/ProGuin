@@ -7,7 +7,13 @@ import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
 import androidx.core.app.NotificationManagerCompat
+import com.chaquo.python.Python
+import com.chaquo.python.android.AndroidPlatform
+import com.venkatesh.proguin.data.StatsStore
 import kotlinx.coroutines.*
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Locale
 import kotlin.math.max
 
 class TimerForegroundService : Service() {
@@ -21,6 +27,7 @@ class TimerForegroundService : Service() {
         private const val EXTRA_TASK_ID = "taskId"
         private const val EXTRA_TASK_NAME = "taskName"
         private const val EXTRA_MINUTES = "minutes"
+        private const val EXTRA_PAGE_ID = "pageId"
 
         private const val SP_NAME = "proguin_timer_state"
         private const val KEY_ACTIVE_TASK_ID = "active_task_id"
@@ -45,7 +52,7 @@ class TimerForegroundService : Service() {
                 .orEmpty()
         }
 
-        fun startTimer(context: Context, taskId: String, taskName: String, minutes: Int) {
+        fun startTimer(context: Context, taskId: String, taskName: String, minutes: Int, pageId: String = "") {
             setActiveTaskId(context, taskId)
 
             val i = Intent(context, TimerForegroundService::class.java).apply {
@@ -53,6 +60,7 @@ class TimerForegroundService : Service() {
                 putExtra(EXTRA_TASK_ID, taskId)
                 putExtra(EXTRA_TASK_NAME, taskName)
                 putExtra(EXTRA_MINUTES, minutes)
+                putExtra(EXTRA_PAGE_ID, pageId)
             }
             if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(i) else context.startService(i)
         }
@@ -97,7 +105,9 @@ class TimerForegroundService : Service() {
 
     private var currentTaskId = ""
     private var currentTaskName = ""
+    private var currentPageId = ""
     private var currentNotifId = 0
+    private var currentMinutes = 0
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -108,29 +118,26 @@ class TimerForegroundService : Service() {
 
             ACTION_START -> {
 
-                // ✅ Set ids first (fast)
                 currentTaskId = intent?.getStringExtra(EXTRA_TASK_ID).orEmpty()
                 currentTaskName = intent?.getStringExtra(EXTRA_TASK_NAME).orEmpty()
+                currentPageId = intent?.getStringExtra(EXTRA_PAGE_ID).orEmpty()
                 currentNotifId = NotificationHelper.timerNotifId(currentTaskId)
 
-                // ✅ Call startForeground ASAP (prevents ForegroundServiceDidNotStartInTimeException)
-                // NOTE: remainingMs may be 0 initially, we will stop immediately after if needed.
-                remainingMs = 1_000L
-                startForegroundNow(isRunning = true)
-
+                // ✅ Read minutes first (so notification can show correct details)
                 val minutes = intent?.getIntExtra(EXTRA_MINUTES, 0) ?: 0
+                currentMinutes = minutes
                 remainingMs = max(0, minutes) * 60_000L
 
-                // ✅ If minutes is 0, do not keep foreground service alive
                 if (remainingMs <= 0L) {
                     clearActiveTaskId(this)
                     stopEverything(currentNotifId)
                     return START_NOT_STICKY
                 }
 
-                // ✅ Ensure notification updates to correct time right away
-                updateNotification(isRunning = true)
+                // Start foreground ASAP
+                startForegroundNow(isRunning = true)
 
+                updateNotification(isRunning = true)
                 startTicking()
             }
 
@@ -162,14 +169,17 @@ class TimerForegroundService : Service() {
             notifId = currentNotifId,
             taskId = currentTaskId,
             taskName = currentTaskName,
-            contentText = if (isRunning) "Running • $text" else "Paused • $text",
-            isRunning = isRunning
+            pageId = currentPageId,
+            minutes = currentMinutes,
+            contentText = if (isRunning) "Running" else "Paused",
+            isRunning = isRunning,
+            remainingMs = remainingMs,
+            totalMs = (currentMinutes.coerceAtLeast(0) * 60_000L)
         )
 
         try {
             startForeground(currentNotifId, notif)
         } catch (_: Exception) {
-            // if foreground fails, stop to avoid crash loop
             stopEverything(currentNotifId)
         }
     }
@@ -182,8 +192,12 @@ class TimerForegroundService : Service() {
             notifId = currentNotifId,
             taskId = currentTaskId,
             taskName = currentTaskName,
-            contentText = if (isRunning) "Running • $text" else "Paused • $text",
-            isRunning = isRunning
+            pageId = currentPageId,
+            minutes = currentMinutes,
+            contentText = if (isRunning) "Running" else "Paused",
+            isRunning = isRunning,
+            remainingMs = remainingMs,
+            totalMs = (currentMinutes.coerceAtLeast(0) * 60_000L)
         )
 
         NotificationHelper.safeNotify(this, currentNotifId, notif)
@@ -210,32 +224,30 @@ class TimerForegroundService : Service() {
 
                     clearActiveTaskId(this@TimerForegroundService)
 
-                    // ✅ one-time sound via reminders channel
                     try {
                         NotificationHelper.showReminder(
                             context = this@TimerForegroundService,
                             title = "Time’s up ⏰",
-                            message = currentTaskName.ifBlank { "Work ended • Take a break" }
+                            message = currentTaskName.ifBlank { "Session ended • Take a break" }
                         )
                     } catch (_: Exception) { }
 
-                    // ✅ Update pages.json: stop running
+                    // ✅ Mark task DONE automatically + generate next recurring if configured
+                    val nextInfo = tryCompleteAndGenerateNext()
+
+                    // ✅ Stats (Dashboard + XP)
                     try {
-                        val py = com.chaquo.python.Python.getInstance()
-                        val core = py.getModule("proguin.core")
-                        val pagesPath = java.io.File(filesDir, "pages.json").absolutePath
-                        val pages = core.callAttr("load_pages", pagesPath)
-
-                        try {
-                            core.callAttr("stop_task_by_id", pages, currentTaskId)
-                        } catch (_: Exception) {
-                            try { core.callAttr("set_task_running", pages, currentTaskId, false) } catch (_: Exception) { }
-                        }
-
-                        core.callAttr("save_pages", pagesPath, pages)
+                        val stats = StatsStore(this@TimerForegroundService)
+                        stats.addCompletion(currentTaskName)
+                        if (currentMinutes > 0) stats.addFocusMinutes(currentMinutes)
                     } catch (_: Exception) { }
 
-                    // ✅ Refresh UI
+                    // ✅ Schedule next recurring alarm (if any)
+                    if (nextInfo != null) {
+                        tryScheduleNext(nextInfo)
+                    }
+
+                    // Refresh UI
                     try {
                         sendBroadcast(
                             Intent("com.venkatesh.proguin.PAGES_UPDATED").apply {
@@ -249,6 +261,82 @@ class TimerForegroundService : Service() {
                 }
             }
         }
+    }
+
+    private data class NextTaskInfo(
+        val id: String,
+        val name: String,
+        val minutes: Int,
+        val scheduledIso: String
+    )
+
+    private fun tryCompleteAndGenerateNext(): NextTaskInfo? {
+        return try {
+            if (!Python.isStarted()) {
+                Python.start(AndroidPlatform(this@TimerForegroundService))
+            }
+            val py = Python.getInstance()
+            val core = py.getModule("proguin.core")
+            val pagesPath = File(filesDir, "pages.json").absolutePath
+            val pages = core.callAttr("load_pages", pagesPath)
+
+            val nextTask = core.callAttr("complete_task_and_generate_next", pages, currentTaskId)
+            core.callAttr("save_pages", pagesPath, pages)
+
+            if (nextTask == null || nextTask.toString() == "None") return null
+
+            val m = nextTask.asMap()
+            val id = m[com.chaquo.python.PyObject.fromJava("id")]?.toString().orEmpty()
+            val name = m[com.chaquo.python.PyObject.fromJava("name")]?.toString().orEmpty()
+            val minutesAny = m[com.chaquo.python.PyObject.fromJava("timer_minutes")]?.toString().orEmpty()
+            val minutes = minutesAny.toIntOrNull() ?: 0
+            val sched = m[com.chaquo.python.PyObject.fromJava("scheduled_start")]?.toString().orEmpty()
+            if (id.isBlank() || sched.isBlank()) null else NextTaskInfo(id, name, minutes, sched)
+        } catch (_: Exception) {
+            // fallback: just complete
+            try {
+                if (!Python.isStarted()) {
+                    Python.start(AndroidPlatform(this@TimerForegroundService))
+                }
+                val py = Python.getInstance()
+                val core = py.getModule("proguin.core")
+                val pagesPath = File(filesDir, "pages.json").absolutePath
+                val pages = core.callAttr("load_pages", pagesPath)
+                core.callAttr("complete_task_by_id", pages, currentTaskId)
+                core.callAttr("save_pages", pagesPath, pages)
+            } catch (_: Exception) { }
+            null
+        }
+    }
+
+    private fun tryScheduleNext(next: NextTaskInfo) {
+        try {
+            val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
+            val dt = fmt.parse(next.scheduledIso) ?: return
+            val ms = dt.time
+            if (ms <= System.currentTimeMillis()) return
+
+            // ✅ Multiple schedules safe request code
+            val req = taskScheduleToRequestCode(currentPageId.ifBlank { "default" }, next.id, ms)
+            AlarmScheduler.scheduleAllowWhileIdle(
+                context = this,
+                requestCode = req,
+                triggerAtMillis = ms,
+                pageId = currentPageId.ifBlank { "default" },
+                taskId = next.id,
+                taskName = next.name,
+                timerMinutes = next.minutes
+            )
+        } catch (_: Exception) { }
+    }
+
+    private fun taskScheduleToRequestCode(pageId: String, taskId: String, triggerAtMillis: Long): Int {
+        val raw = "$pageId::$taskId::$triggerAtMillis"
+        var h = 7
+        for (c in raw) {
+            h = 31 * h + c.code
+        }
+        return h
     }
 
     private fun pauseInternal() {
